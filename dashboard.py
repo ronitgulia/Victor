@@ -12,120 +12,130 @@ import json, os
 # ─────────────────────────────────────────────────────────────────
 
 st.set_page_config(
-    page_title = "Victor — Bot Detector",
+    page_title = "Victor — Bot Detection",
     page_icon  = "🛡️",
     layout     = "wide",
     initial_sidebar_state = "expanded"
 )
 
 # ─────────────────────────────────────────────────────────────────
-# CUSTOM CSS  —  dark glassmorphism theme
+# CUSTOM CSS  —  clean professional light theme
 # ─────────────────────────────────────────────────────────────────
 
 st.markdown("""
 <style>
+  * { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif !important; }
+
   /* ── global background ── */
   .stApp {
-      background: linear-gradient(135deg, #0a0e1a 0%, #0f1729 50%, #0a1628 100%);
-      color: #e2e8f0;
+      background: #ffffff;
+      color: #1f2937;
   }
 
   /* ── sidebar ── */
   [data-testid="stSidebar"] {
-      background: rgba(15, 23, 41, 0.95);
-      border-right: 1px solid rgba(99, 102, 241, 0.2);
+      background: #f8f9fa;
+      border-right: 1px solid #e5e7eb;
   }
 
   /* ── metric cards ── */
   [data-testid="stMetric"] {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(99,102,241,0.25);
-      border-radius: 14px;
-      padding: 16px 20px;
-      backdrop-filter: blur(12px);
-      transition: transform 0.2s, box-shadow 0.2s;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   }
   [data-testid="stMetric"]:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 30px rgba(99,102,241,0.25);
+      border-color: #d1d5db;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
   }
-  [data-testid="stMetricLabel"]  { color: #94a3b8 !important; font-size: 0.78rem !important; letter-spacing: 0.06em; text-transform: uppercase; }
-  [data-testid="stMetricValue"]  { color: #f1f5f9 !important; font-size: 1.9rem !important; font-weight: 700; }
-  [data-testid="stMetricDelta"]  { font-size: 0.85rem !important; }
+  [data-testid="stMetricLabel"]  { color: #6b7280 !important; font-size: 0.75rem !important; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+  [data-testid="stMetricValue"]  { color: #111827 !important; font-size: 2rem !important; font-weight: 700; }
+  [data-testid="stMetricDelta"]  { font-size: 0.85rem !important; font-weight: 500; }
 
   /* ── section headings ── */
-  h1 { color: #818cf8 !important; font-weight: 800 !important; }
-  h2, h3 { color: #c7d2fe !important; }
+  h1 { color: #111827 !important; font-weight: 700 !important; font-size: 2.2rem !important; }
+  h2 { color: #1f2937 !important; font-weight: 600 !important; font-size: 1.4rem !important; }
+  h3 { color: #374151 !important; font-weight: 600 !important; }
 
   /* ── divider ── */
-  hr { border-color: rgba(99,102,241,0.2) !important; }
+  hr { border-color: #e5e7eb !important; }
 
   /* ── data table wrapper ── */
   .victor-table-wrap {
       overflow-x: auto;
-      border-radius: 12px;
-      border: 1px solid rgba(99,102,241,0.2);
-      background: rgba(255,255,255,0.02);
-      backdrop-filter: blur(8px);
-      margin-top: 8px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+      margin-top: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   }
   .victor-table-wrap table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.82rem;
+      font-size: 0.9rem;
   }
   .victor-table-wrap th {
-      background: rgba(99,102,241,0.15);
-      color: #a5b4fc;
-      padding: 10px 12px;
+      background: #f3f4f6;
+      color: #374151;
+      padding: 12px 16px;
       text-align: left;
+      font-weight: 600;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
-      font-size: 0.7rem;
-      letter-spacing: 0.06em;
-      border-bottom: 1px solid rgba(99,102,241,0.2);
+      border-bottom: 1px solid #e5e7eb;
   }
   .victor-table-wrap td {
-      padding: 8px 12px;
-      border-bottom: 1px solid rgba(255,255,255,0.04);
-      color: #cbd5e1;
+      padding: 12px 16px;
+      border-bottom: 1px solid #f3f4f6;
+      color: #4b5563;
   }
-  .victor-table-wrap tr:hover td { background: rgba(99,102,241,0.06); }
+  .victor-table-wrap tr:hover td { background: #f9fafb; }
 
   /* ── status badges ── */
-  .badge-bot   { background:#ef444420; color:#f87171; border:1px solid #f8717150;
-                 padding:2px 10px; border-radius:20px; font-weight:700; font-size:0.75rem; }
-  .badge-human { background:#22c55e20; color:#4ade80; border:1px solid #4ade8050;
-                 padding:2px 10px; border-radius:20px; font-weight:700; font-size:0.75rem; }
+  .badge-bot   { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca;
+                 padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 0.75rem; }
+  .badge-human { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0;
+                 padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 0.75rem; }
 
   /* ── radio + selectbox ── */
-  .stRadio label, .stSelectbox label { color: #94a3b8 !important; }
+  .stRadio label, .stSelectbox label { color: #374151 !important; font-weight: 500; }
 
   /* ── info box ── */
   .info-card {
-      background: rgba(99,102,241,0.08);
-      border: 1px solid rgba(99,102,241,0.25);
-      border-radius: 12px;
-      padding: 16px 20px;
-      margin-bottom: 12px;
+      background: #f0f4ff;
+      border: 1px solid #d1d5f8;
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
   }
+  .info-card b { color: #1e40af; }
 
-  /* ── plotly charts — dark bg ── */
-  .js-plotly-plot { border-radius: 12px; overflow: hidden; }
+  /* ── plotly charts ── */
+  .js-plotly-plot { border-radius: 10px; overflow: hidden; }
+
+  /* ── input fields ── */
+  .stTextInput input, .stSlider [data-testid="stNumberInput"] {
+      border: 1px solid #d1d5db !important;
+      border-radius: 8px !important;
+  }
 </style>
 """, unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────────────────────────
-# PLOTLY shared dark layout
+# PLOTLY shared light layout
 # ─────────────────────────────────────────────────────────────────
 
-DARK_LAYOUT = dict(
-    paper_bgcolor = "rgba(0,0,0,0)",
-    plot_bgcolor  = "rgba(0,0,0,0)",
-    font          = dict(color="#94a3b8", family="Inter, system-ui, sans-serif"),
-    xaxis         = dict(gridcolor="rgba(255,255,255,0.05)", zerolinecolor="rgba(255,255,255,0.05)"),
-    yaxis         = dict(gridcolor="rgba(255,255,255,0.05)", zerolinecolor="rgba(255,255,255,0.05)"),
-    legend        = dict(bgcolor="rgba(0,0,0,0)", font=dict(color="#cbd5e1")),
+CHART_LAYOUT = dict(
+    paper_bgcolor = "#ffffff",
+    plot_bgcolor  = "#f9fafb",
+    font          = dict(color="#374151", family="system-ui, -apple-system, sans-serif"),
+    xaxis         = dict(gridcolor="#e5e7eb", zerolinecolor="#e5e7eb"),
+    yaxis         = dict(gridcolor="#e5e7eb", zerolinecolor="#e5e7eb"),
+    legend        = dict(bgcolor="#ffffff", font=dict(color="#4b5563"), bordercolor="#e5e7eb", borderwidth=1),
     margin        = dict(t=30, b=40, l=10, r=10),
 )
 
@@ -170,22 +180,21 @@ metrics = load_metrics()
 # ─────────────────────────────────────────────────────────────────
 
 with st.sidebar:
-    st.markdown("## 🛡️ Victor")
-    st.markdown("<small style='color:#64748b'>Web Bot Fingerprint Detector</small>", unsafe_allow_html=True)
+    st.markdown("<div style='padding:16px 0'><h2 style='margin:0;color:#111827'>Victor</h2><p style='color:#6b7280;font-size:0.9rem;margin:4px 0'>Bot Detection</p></div>", unsafe_allow_html=True)
     st.divider()
 
-    st.markdown("**Navigate**")
-    page = st.radio("", ["📊 Dashboard", "🔍 Live IP Check", "🧠 Model Explainability", "📋 Raw Log"], label_visibility="collapsed")
+    st.markdown("<span style='font-weight:600;color:#374151'>Navigation</span>", unsafe_allow_html=True)
+    page = st.radio("", ["Dashboard", "IP Lookup", "Model Explainability", "Raw Data"], label_visibility="collapsed")
     st.divider()
 
     # model metrics in sidebar if available
     if metrics:
-        st.markdown("**Model Performance**")
+        st.markdown("<span style='font-weight:600;color:#374151'>Model Performance</span>", unsafe_allow_html=True)
         st.metric("XGBoost AUC", f"{metrics.get('xgb_auc', 0):.3f}")
-        st.metric("IsoForest AUC", f"{metrics.get('iso_auc', 0):.3f}")
+        st.metric("Isolation Forest AUC", f"{metrics.get('iso_auc', 0):.3f}")
         st.divider()
 
-    threshold = st.slider("🎚️ Bot Score Threshold", 0.1, 0.9, 0.5, 0.05,
+    threshold = st.slider("Bot Score Threshold", 0.1, 0.9, 0.5, 0.05,
                           help="Requests above this score are flagged as bots")
     st.divider()
 
@@ -195,11 +204,13 @@ with st.sidebar:
 
     st.markdown(f"""
     <div class='info-card'>
-      <b style='color:#a5b4fc'>Session Stats</b><br>
-      <small style='color:#64748b'>Total requests</small><br>
-      <b style='font-size:1.3rem;color:#f1f5f9'>{total:,}</b><br><br>
-      <small style='color:#f87171'>● Bots detected</small> &nbsp;<b style='color:#f87171'>{flagged_bots:,}</b><br>
-      <small style='color:#4ade80'>● Clean humans</small> &nbsp;<b style='color:#4ade80'>{clean_humans:,}</b>
+      <div style='font-weight:600;color:#1e40af;margin-bottom:8px'>Session Summary</div>
+      <div style='font-size:0.85rem;color:#6b7280;margin-bottom:2px'>Total Requests</div>
+      <div style='font-size:1.8rem;font-weight:700;color:#111827;margin-bottom:12px'>{total:,}</div>
+      <div style='font-size:0.85rem;color:#dc2626;margin-bottom:2px'>• Flagged as Bots</div>
+      <div style='font-size:1.5rem;font-weight:700;color:#dc2626;margin-bottom:12px'>{flagged_bots:,}</div>
+      <div style='font-size:0.85rem;color:#16a34a;margin-bottom:2px'>• Clean (Human)</div>
+      <div style='font-size:1.5rem;font-weight:700;color:#16a34a'>{clean_humans:,}</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -208,9 +219,9 @@ with st.sidebar:
 # ── PAGE 1: DASHBOARD ──
 # ─────────────────────────────────────────────────────────────────
 
-if page == "📊 Dashboard":
-    st.markdown("# 🛡️ Victor — Bot Detection Dashboard")
-    st.markdown("<p style='color:#64748b;margin-top:-10px'>Real-time behavioral fingerprinting · Ensemble ML · XGBoost + Isolation Forest</p>", unsafe_allow_html=True)
+if page == "Dashboard":
+    st.markdown("# Victor — Bot Detection Dashboard")
+    st.markdown("<p style='color:#6b7280;margin-top:-12px;font-size:1rem'>Real-time behavioral fingerprinting with ensemble machine learning</p>", unsafe_allow_html=True)
     st.divider()
 
     avg_bot_score = round(preds["ensemble_score"].mean(), 3)
@@ -233,22 +244,23 @@ if page == "📊 Dashboard":
         pie_df = pd.DataFrame({"Type": ["Bot", "Human"], "Count": [flagged_bots, clean_humans]})
         fig_pie = px.pie(pie_df, names="Type", values="Count",
                          color="Type",
-                         color_discrete_map={"Bot": "#ef4444", "Human": "#22c55e"},
+                         color_discrete_map={"Bot": "#dc2626", "Human": "#16a34a"},
                          hole=0.5)
         fig_pie.update_traces(textposition="inside", textinfo="percent+label",
-                              marker=dict(line=dict(color="#0f1729", width=3)))
-        fig_pie.update_layout(**DARK_LAYOUT)
+                              marker=dict(line=dict(color="#ffffff", width=3)))
+        fig_pie.update_layout(**CHART_LAYOUT)
+        fig_pie.update_layout(**CHART_LAYOUT)
         st.plotly_chart(fig_pie, use_container_width=True)
 
     with right:
         st.subheader("Bot Confidence Score Distribution")
         fig_hist = px.histogram(preds, x="ensemble_score", nbins=35,
-                                color_discrete_sequence=["#6366f1"],
+                                color_discrete_sequence=["#3b82f6"],
                                 labels={"ensemble_score": "Bot Probability"})
-        fig_hist.add_vline(x=threshold, line_dash="dash", line_color="#f87171",
+        fig_hist.add_vline(x=threshold, line_dash="dash", line_color="#dc2626",
                            annotation_text=f"Threshold ({threshold})",
-                           annotation_font_color="#f87171")
-        fig_hist.update_layout(**DARK_LAYOUT)
+                           annotation_font_color="#dc2626")
+        fig_hist.update_layout(**CHART_LAYOUT)
         st.plotly_chart(fig_hist, use_container_width=True)
 
     st.divider()
@@ -266,10 +278,10 @@ if page == "📊 Dashboard":
 
     fig_bar = go.Figure()
     fig_bar.add_trace(go.Bar(name="Bot",   x=compare_df["Feature"], y=compare_df["Bot"],
-                             marker_color="#ef4444", marker_opacity=0.85))
+                             marker_color="#dc2626", marker_opacity=0.85))
     fig_bar.add_trace(go.Bar(name="Human", x=compare_df["Feature"], y=compare_df["Human"],
-                             marker_color="#22c55e", marker_opacity=0.85))
-    fig_bar.update_layout(barmode="group", xaxis_tickangle=-20, **DARK_LAYOUT)
+                             marker_color="#16a34a", marker_opacity=0.85))
+    fig_bar.update_layout(barmode="group", xaxis_tickangle=-20, **CHART_LAYOUT)
     st.plotly_chart(fig_bar, use_container_width=True)
 
     # ── row 3: score over time (if timestamp available) ──
@@ -280,9 +292,9 @@ if page == "📊 Dashboard":
         preds_t["timestamp"] = pd.to_datetime(preds_t["timestamp"], errors="coerce")
         preds_t = preds_t.dropna(subset=["timestamp"]).sort_values("timestamp")
         fig_line = px.line(preds_t, x="timestamp", y="ensemble_score",
-                           color_discrete_sequence=["#818cf8"])
-        fig_line.add_hline(y=threshold, line_dash="dash", line_color="#f87171")
-        fig_line.update_layout(**DARK_LAYOUT)
+                           color_discrete_sequence=["#3b82f6"])
+        fig_line.add_hline(y=threshold, line_dash="dash", line_color="#dc2626")
+        fig_line.update_layout(**CHART_LAYOUT)
         st.plotly_chart(fig_line, use_container_width=True)
 
 
@@ -290,9 +302,9 @@ if page == "📊 Dashboard":
 # ── PAGE 2: LIVE IP CHECK ──
 # ─────────────────────────────────────────────────────────────────
 
-elif page == "🔍 Live IP Check":
-    st.markdown("# 🔍 Live IP Lookup")
-    st.markdown("<p style='color:#64748b;margin-top:-10px'>Check any IP address against the logged traffic data.</p>", unsafe_allow_html=True)
+elif page == "IP Lookup":
+    st.markdown("# IP Lookup")
+    st.markdown("<p style='color:#6b7280;margin-top:-12px;font-size:1rem'>Check any IP address against the logged traffic data</p>", unsafe_allow_html=True)
     st.divider()
 
     ip_input = st.text_input("Enter an IP address to inspect", placeholder="e.g. 127.0.0.1")
@@ -315,14 +327,16 @@ elif page == "🔍 Live IP Check":
             avg_score = pred_ip["ensemble_score"].mean()
             is_bot    = avg_score > threshold
 
-            verdict_color = "#f87171" if is_bot else "#4ade80"
-            verdict_label = "⚠️ BOT" if is_bot else "✅ HUMAN"
+            verdict_color = "#dc2626" if is_bot else "#16a34a"
+            verdict_label = "BOT" if is_bot else "HUMAN"
+            verdict_bg = "#fee2e2" if is_bot else "#dcfce7"
+            verdict_border = "#fecaca" if is_bot else "#bbf7d0"
 
             st.markdown(f"""
-            <div style='background:rgba(255,255,255,0.03);border:1px solid {verdict_color}40;
-                        border-radius:14px;padding:20px 24px;margin-bottom:20px'>
-              <h3 style='color:{verdict_color};margin:0'>{verdict_label}</h3>
-              <p style='color:#94a3b8;margin:4px 0 0'>IP: <b style='color:#f1f5f9'>{ip_input}</b>
+            <div style='background:{verdict_bg};border:2px solid {verdict_border};
+                        border-radius:12px;padding:24px;margin-bottom:20px'>
+              <h3 style='color:{verdict_color};margin:0;font-size:1.5rem'>{verdict_label}</h3>
+              <p style='color:#374151;margin:8px 0 0;font-size:0.95rem'>IP: <b>{ip_input}</b>
                  &nbsp;·&nbsp; {len(pred_ip)} requests logged
                  &nbsp;·&nbsp; Avg score: <b style='color:{verdict_color}'>{avg_score:.3f}</b>
               </p>
@@ -336,9 +350,9 @@ elif page == "🔍 Live IP Check":
 
             st.markdown("**Score distribution for this IP**")
             fig_ip = px.histogram(pred_ip, x="ensemble_score", nbins=15,
-                                  color_discrete_sequence=["#6366f1"])
-            fig_ip.add_vline(x=threshold, line_dash="dash", line_color="#f87171")
-            fig_ip.update_layout(**DARK_LAYOUT)
+                                  color_discrete_sequence=["#3b82f6"])
+            fig_ip.add_vline(x=threshold, line_dash="dash", line_color="#dc2626")
+            fig_ip.update_layout(**CHART_LAYOUT)
             st.plotly_chart(fig_ip, use_container_width=True)
     else:
         st.info("💡 Enter an IP address above to see its full activity profile.")
@@ -348,9 +362,9 @@ elif page == "🔍 Live IP Check":
 # ── PAGE 3: MODEL EXPLAINABILITY ──
 # ─────────────────────────────────────────────────────────────────
 
-elif page == "🧠 Model Explainability":
-    st.markdown("# 🧠 Model Explainability")
-    st.markdown("<p style='color:#64748b;margin-top:-10px'>SHAP values reveal <em>why</em> Victor flagged each request — not just that it did.</p>", unsafe_allow_html=True)
+elif page == "Model Explainability":
+    st.markdown("# Model Explainability")
+    st.markdown("<p style='color:#6b7280;margin-top:-12px;font-size:1rem'>Understanding what drives bot detection predictions</p>", unsafe_allow_html=True)
     st.divider()
 
     shap_img_bar    = "data/shap/feature_bar.png"
@@ -383,7 +397,7 @@ elif page == "🧠 Model Explainability":
             aspect="auto",
             labels=dict(x="Request Index", y="Feature", color="SHAP")
         )
-        fig_heat.update_layout(**DARK_LAYOUT, height=380)
+        fig_heat.update_layout(**CHART_LAYOUT, height=380)
         st.plotly_chart(fig_heat, use_container_width=True)
 
     st.divider()
@@ -406,16 +420,16 @@ elif page == "🧠 Model Explainability":
 # ── PAGE 4: RAW LOG ──
 # ─────────────────────────────────────────────────────────────────
 
-elif page == "📋 Raw Log":
-    st.markdown("# 📋 Raw Predictions Log")
-    st.markdown("<p style='color:#64748b;margin-top:-10px'>Full dataset with scores, flags, and filtering.</p>", unsafe_allow_html=True)
+elif page == "Raw Data":
+    st.markdown("# Raw Predictions Log")
+    st.markdown("<p style='color:#6b7280;margin-top:-12px;font-size:1rem'>Full dataset with scores, flags, and filtering</p>", unsafe_allow_html=True)
     st.divider()
 
     col_f1, col_f2 = st.columns([2, 1])
     with col_f1:
         filter_opt = st.radio("Show:", ["All", "Bots only", "Humans only"], horizontal=True)
     with col_f2:
-        search_score = st.slider("Min ensemble score", 0.0, 1.0, 0.0, 0.01)
+        search_score = st.slider("Min score", 0.0, 1.0, 0.0, 0.01)
 
     display_df = preds.copy()
     display_df["victor_flag"] = (display_df["ensemble_score"] > threshold).astype(int)
