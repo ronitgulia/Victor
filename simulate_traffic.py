@@ -1,7 +1,3 @@
-# simulate_traffic.py
-# faster version — reduced sleep times so simulation finishes in ~30 seconds
-# the timing patterns still differ enough for Victor to learn from
-
 import requests
 import time
 import random

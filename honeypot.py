@@ -1,8 +1,3 @@
-# honeypot.py  —  Victor's honeypot server
-# Runs a realistic-looking Flask site that silently logs every request.
-# Humans see a styled page; bots see responses too but get fingerprinted.
-# Run:  python honeypot.py
-
 from flask import Flask, request, jsonify, make_response
 import json, os
 from datetime import datetime
@@ -11,15 +6,10 @@ app = Flask(__name__)
 
 LOG_FILE = "data/traffic_logs.json"
 
-# Known bot user-agent signatures
 BOT_SIGNATURES = [
     "python-requests", "scrapy", "curl", "go-http-client",
     "wget", "bot", "crawl", "spider"
 ]
-
-# ─────────────────────────────────────────────────────────────────
-# Shared HTML template  —  styled dark theme
-# ─────────────────────────────────────────────────────────────────
 
 def html_page(title: str, body: str) -> str:
     return f"""<!DOCTYPE html>
@@ -112,11 +102,6 @@ def html_page(title: str, body: str) -> str:
 </body>
 </html>"""
 
-
-# ─────────────────────────────────────────────────────────────────
-# Logging helpers
-# ─────────────────────────────────────────────────────────────────
-
 def detect_label() -> int:
     ua = request.headers.get("User-Agent", "").lower()
     if any(sig in ua for sig in BOT_SIGNATURES):
@@ -124,7 +109,6 @@ def detect_label() -> int:
     if "secret" in request.path:
         return 1
     return 0
-
 
 def log_request() -> dict:
     os.makedirs("data", exist_ok=True)
@@ -154,11 +138,6 @@ def log_request() -> dict:
         json.dump(logs, f, indent=2)
 
     return entry
-
-
-# ─────────────────────────────────────────────────────────────────
-# Routes
-# ─────────────────────────────────────────────────────────────────
 
 @app.route("/")
 def home():

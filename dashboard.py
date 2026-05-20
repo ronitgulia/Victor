@@ -1,15 +1,8 @@
-# dashboard.py  —  Victor  •  Bot Detection Dashboard
-# run:  streamlit run dashboard.py
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import json, os
-
-# ─────────────────────────────────────────────────────────────────
-# PAGE CONFIG  (must be first Streamlit call)
-# ─────────────────────────────────────────────────────────────────
 
 st.set_page_config(
     page_title = "Victor — Bot Detection",
@@ -17,10 +10,6 @@ st.set_page_config(
     layout     = "wide",
     initial_sidebar_state = "expanded"
 )
-
-# ─────────────────────────────────────────────────────────────────
-# CUSTOM CSS  —  clean professional light theme
-# ─────────────────────────────────────────────────────────────────
 
 st.markdown("""
 <style>
@@ -139,11 +128,6 @@ CHART_LAYOUT = dict(
     margin        = dict(t=30, b=40, l=10, r=10),
 )
 
-
-# ─────────────────────────────────────────────────────────────────
-# DATA LOADING
-# ─────────────────────────────────────────────────────────────────
-
 @st.cache_data
 def load_data():
     preds    = pd.read_csv("data/predictions.csv")
@@ -174,10 +158,6 @@ FEATURE_COLS = [
 preds, features = load_data()
 metrics = load_metrics()
 
-
-# ─────────────────────────────────────────────────────────────────
-# SIDEBAR
-# ─────────────────────────────────────────────────────────────────
 
 with st.sidebar:
     st.markdown("<div style='padding:16px 0'><h2 style='margin:0;color:#111827'>Victor</h2><p style='color:#6b7280;font-size:0.9rem;margin:4px 0'>Bot Detection</p></div>", unsafe_allow_html=True)
@@ -215,20 +195,12 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
 
-# ─────────────────────────────────────────────────────────────────
-# ── PAGE 1: DASHBOARD ──
-# ─────────────────────────────────────────────────────────────────
-
 if page == "Dashboard":
     st.markdown("# Victor — Bot Detection Dashboard")
     st.markdown("<p style='color:#6b7280;margin-top:-12px;font-size:1rem'>Real-time behavioral fingerprinting with ensemble machine learning</p>", unsafe_allow_html=True)
     st.divider()
 
     avg_bot_score = round(preds["ensemble_score"].mean(), 3)
-    bot_pct       = flagged_bots / total * 100
-    human_pct     = clean_humans / total * 100
-
-    c1, c2, c3, c4 = st.columns(4)
     c1.metric("Total Requests",  f"{total:,}")
     c2.metric("Bots Flagged",    f"{flagged_bots:,}",  delta=f"{bot_pct:.1f}%",   delta_color="inverse")
     c3.metric("Clean (Human)",   f"{clean_humans:,}",  delta=f"{human_pct:.1f}%")
@@ -236,7 +208,6 @@ if page == "Dashboard":
 
     st.divider()
 
-    # ── row 1: pie + histogram ──
     left, right = st.columns(2)
 
     with left:
@@ -265,7 +236,6 @@ if page == "Dashboard":
 
     st.divider()
 
-    # ── row 2: feature comparison bar chart ──
     st.subheader("Feature Comparison — Bots vs Humans")
 
     bot_means   = features[features["label"] == 1][FEATURE_COLS].mean()
@@ -285,7 +255,6 @@ if page == "Dashboard":
     st.plotly_chart(fig_bar, use_container_width=True)
 
     # ── row 3: score over time (if timestamp available) ──
-    if "timestamp" in preds.columns:
         st.divider()
         st.subheader("Bot Score Over Time")
         preds_t = preds.copy()
@@ -298,15 +267,9 @@ if page == "Dashboard":
         st.plotly_chart(fig_line, use_container_width=True)
 
 
-# ─────────────────────────────────────────────────────────────────
-# ── PAGE 2: LIVE IP CHECK ──
-# ─────────────────────────────────────────────────────────────────
-
 elif page == "IP Lookup":
     st.markdown("# IP Lookup")
     st.markdown("<p style='color:#6b7280;margin-top:-12px;font-size:1rem'>Check any IP address against the logged traffic data</p>", unsafe_allow_html=True)
-    st.divider()
-
     ip_input = st.text_input("Enter an IP address to inspect", placeholder="e.g. 127.0.0.1")
 
     if ip_input:
@@ -402,7 +365,6 @@ elif page == "Model Explainability":
 
     st.divider()
     st.subheader("What Each Feature Means")
-    explanations = {
         "ua_is_suspicious":      "User agent matches known bot signatures (python-requests, curl, etc.)",
         "has_referer":           "Whether the request came with a Referer header (humans usually do)",
         "has_accept_lang":       "Whether Accept-Language header was sent (bots often skip it)",
@@ -415,10 +377,6 @@ elif page == "Model Explainability":
     for feat, desc in explanations.items():
         st.markdown(f"**`{feat}`** — {desc}")
 
-
-# ─────────────────────────────────────────────────────────────────
-# ── PAGE 4: RAW LOG ──
-# ─────────────────────────────────────────────────────────────────
 
 elif page == "Raw Data":
     st.markdown("# Raw Predictions Log")
