@@ -7,7 +7,7 @@ from datetime import datetime
 
 st.set_page_config(
     page_title="Victor — Bot Detection",
-    page_icon="🔐",
+    page_icon=":shield:",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -144,6 +144,28 @@ st.markdown("""
         border-color: #0984e3 !important;
         box-shadow: 0 0 0 3px rgba(9, 132, 227, 0.1) !important;
     }
+    
+    /* Sidebar metric visibility - override defaults */
+    [data-testid="stSidebar"] [data-testid="stMetric"] {
+        background: rgba(255, 255, 255, 0.15) !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        backdrop-filter: blur(10px);
+    }
+    
+    [data-testid="stSidebar"] [data-testid="stMetricLabel"] { 
+        color: #e0e0e0 !important;
+        font-size: 0.75rem !important;
+    }
+    
+    [data-testid="stSidebar"] [data-testid="stMetricValue"] { 
+        color: #ffffff !important;
+        font-size: 1.8rem !important;
+    }
+    
+    [data-testid="stSidebar"] [data-testid="stMetricDelta"] {
+        color: #a8e6cf !important;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
