@@ -7,7 +7,7 @@ from datetime import datetime
 
 st.set_page_config(
     page_title="Victor — Bot Detection",
-    page_icon="🛡️",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -203,7 +203,7 @@ preds, features = load_data()
 metrics = load_metrics()
 
 if preds is None or features is None:
-    st.error("❌ Data files not found! Run the pipeline first:\n"
+    st.error("Data files not found! Run the pipeline first:\n"
              "- `python honeypot.py` (in separate terminal)\n"
              "- `python simulate_traffic.py`\n"
              "- `python feature_engineering.py`\n"
@@ -215,7 +215,7 @@ if preds is None or features is None:
 # ─────────────────────────────────────────────────────────────────
 
 with st.sidebar:
-    st.markdown("## 🛡️ VICTOR")
+    st.markdown("## VICTOR")
     st.markdown("**Bot Detection System**")
     st.markdown("_Real-time behavioral analysis_")
     st.divider()
@@ -229,41 +229,41 @@ with st.sidebar:
     
     st.divider()
     
-    st.markdown("### 📊 Navigation")
+    st.markdown("### Navigation")
     page = st.radio(
         "Select View:",
-        ["📈 Dashboard", "🔍 IP Lookup", "🧠 Model Explainability", "📋 Raw Data", "⚙️ Settings"],
+        ["Dashboard", "IP Lookup", "Model Explainability", "Raw Data", "Settings"],
         label_visibility="collapsed"
     )
     
     st.divider()
     
-    st.markdown("### ⚡ Quick Stats")
+    st.markdown("### Quick Stats")
     total = len(preds)
     bots_count = int((preds["victor_flag"] == 1).sum())
     human_count = total - bots_count
     
     col_a, col_b = st.columns(2)
-    col_a.metric("🤖 Bots", f"{bots_count:,}", f"{bots_count/total*100:.1f}%")
-    col_b.metric("👥 Humans", f"{human_count:,}", f"{human_count/total*100:.1f}%")
+    col_a.metric("Bots", f"{bots_count:,}", f"{bots_count/total*100:.1f}%")
+    col_b.metric("Humans", f"{human_count:,}", f"{human_count/total*100:.1f}%")
     
     st.divider()
     
     if metrics:
-        st.markdown("### 🎯 Model Performance")
-        st.metric("XGBoost AUC", f"📊 {metrics.get('xgb_auc', 0):.3f}")
-        st.metric("Isolation Forest", f"🌳 {metrics.get('iso_auc', 0):.3f}")
+        st.markdown("### Model Performance")
+        st.metric("XGBoost AUC", f"{metrics.get('xgb_auc', 0):.3f}")
+        st.metric("Isolation Forest", f"{metrics.get('iso_auc', 0):.3f}")
     
     st.divider()
     
     threshold = st.slider(
-        "🎚️ Bot Score Threshold",
+        "Bot Score Threshold",
         0.0, 1.0, 0.5, 0.05,
         help="Requests scoring above this are flagged as bots"
     )
     
-    st.markdown("### 🔄 Refresh Settings")
-    refresh_now = st.button("🔄 Refresh Data Now", use_container_width=True)
+    st.markdown("### Refresh Settings")
+    refresh_now = st.button("Refresh Data Now", use_container_width=True)
     if refresh_now:
         st.cache_data.clear()
         st.rerun()
@@ -272,8 +272,8 @@ with st.sidebar:
 # PAGE: DASHBOARD
 # ─────────────────────────────────────────────────────────────────
 
-if page == "📈 Dashboard":
-    st.markdown("# 🛡️ Victor Dashboard")
+if page == "Dashboard":
+    st.markdown("# Victor Dashboard")
     st.markdown("_Live bot detection powered by ensemble ML • Auto-refreshes every 5 seconds_")
     st.divider()
     
@@ -286,14 +286,14 @@ if page == "📈 Dashboard":
     
     with m1:
         st.metric(
-            "📊 Total Requests",
+            "Total Requests",
             f"{total:,}",
             "incoming stream"
         )
     
     with m2:
         st.metric(
-            "🤖 Bots Detected",
+            "Bots Detected",
             f"{bots_count:,}",
             f"{bot_pct:.1f}%",
             delta_color="inverse"
@@ -301,14 +301,14 @@ if page == "📈 Dashboard":
     
     with m3:
         st.metric(
-            "👥 Clean Traffic",
+            "Clean Traffic",
             f"{human_count:,}",
             f"{human_pct:.1f}%"
         )
     
     with m4:
         st.metric(
-            "📈 Avg Score",
+            "Avg Score",
             f"{avg_bot_score:.3f}",
             "threshold: 0.50"
         )
@@ -319,9 +319,9 @@ if page == "📈 Dashboard":
     col_left, col_right = st.columns(2)
     
     with col_left:
-        st.subheader("🥧 Traffic Composition")
+        st.subheader("Traffic Composition")
         pie_data = pd.DataFrame({
-            "Type": ["🤖 Bots", "👥 Humans"],
+            "Type": ["Bots", "Humans"],
             "Count": [bots_count, human_count],
             "Pct": [bot_pct, human_pct]
         })
@@ -329,7 +329,7 @@ if page == "📈 Dashboard":
             pie_data,
             names="Type",
             values="Count",
-            color_discrete_map={"🤖 Bots": "#d63031", "👥 Humans": "#00b894"},
+            color_discrete_map={"Bots": "#d63031", "Humans": "#00b894"},
             hole=0.4
         )
         fig_pie.update_traces(
@@ -341,7 +341,7 @@ if page == "📈 Dashboard":
         st.plotly_chart(fig_pie, use_container_width=True)
     
     with col_right:
-        st.subheader("📊 Bot Confidence Scores")
+        st.subheader("Bot Confidence Scores")
         fig_hist = px.histogram(
             preds,
             x="ensemble_score",
@@ -363,7 +363,7 @@ if page == "📈 Dashboard":
     st.divider()
     
     # Feature importance
-    st.subheader("🔍 Feature Importance: Bots vs Humans")
+    st.subheader("Feature Importance: Bots vs Humans")
     st.markdown("_How different behavior patterns differentiate bots from legitimate users_")
     
     bot_means = features[features["label"] == 1][FEATURE_COLS].mean()
@@ -371,21 +371,21 @@ if page == "📈 Dashboard":
     
     compare_df = pd.DataFrame({
         "Feature": [col.replace("_", " ").title() for col in FEATURE_COLS],
-        "🤖 Bots": bot_means.values,
-        "👥 Humans": human_means.values
+        "Bots": bot_means.values,
+        "Humans": human_means.values
     })
     
     fig_bar = go.Figure()
     fig_bar.add_trace(go.Bar(
-        name="🤖 Bots",
+        name="Bots",
         x=compare_df["Feature"],
-        y=compare_df["🤖 Bots"],
+        y=compare_df["Bots"],
         marker=dict(color="#d63031", opacity=0.85, line=dict(color="#c92a1f", width=1.5))
     ))
     fig_bar.add_trace(go.Bar(
-        name="👥 Humans",
+        name="Humans",
         x=compare_df["Feature"],
-        y=compare_df["👥 Humans"],
+        y=compare_df["Humans"],
         marker=dict(color="#00b894", opacity=0.85, line=dict(color="#008c5c", width=1.5))
     ))
     fig_bar.update_layout(barmode="group", xaxis_tickangle=-45, **CHART_LAYOUT, height=450)
@@ -393,7 +393,7 @@ if page == "📈 Dashboard":
     
     # Timeline (if timestamp exists)
     st.divider()
-    st.subheader("⏱️ Detection Timeline")
+    st.subheader("Detection Timeline")
     
     if "timestamp" in preds.columns:
         preds_time = preds.copy()
@@ -414,21 +414,21 @@ if page == "📈 Dashboard":
             fig_timeline.update_layout(**CHART_LAYOUT, height=350)
             st.plotly_chart(fig_timeline, use_container_width=True)
         else:
-            st.info("⏰ No timestamp data available")
+            st.info("No timestamp data available")
     else:
-        st.info("⏰ Timestamp column not found in data")
+        st.info("Timestamp column not found in data")
 
 # ─────────────────────────────────────────────────────────────────
 # PAGE: IP LOOKUP
 # ─────────────────────────────────────────────────────────────────
 
-elif page == "🔍 IP Lookup":
-    st.markdown("# 🔍 IP Address Lookup")
+elif page == "IP Lookup":
+    st.markdown("# IP Address Lookup")
     st.markdown("_Inspect any IP address and see its full activity profile_")
     st.divider()
     
     ip_input = st.text_input(
-        "🔎 Enter IP address to investigate",
+        "Enter IP address to investigate",
         placeholder="e.g., 192.168.1.1 or 127.0.0.1",
         label_visibility="collapsed"
     )
@@ -438,12 +438,12 @@ elif page == "🔍 IP Lookup":
         if "ip" in preds.columns:
             ip_data = preds[preds["ip"] == ip_input]
         else:
-            st.warning("⚠️ IP column not found in predictions data")
+            st.warning("IP column not found in predictions data")
             ip_data = pd.DataFrame()
         
         if len(ip_data) == 0:
-            st.error(f"❌ No records found for IP: **{ip_input}**")
-            st.info("💡 Make sure the IP exists in your traffic data")
+            st.error(f"No records found for IP: **{ip_input}**")
+            st.info("Make sure the IP exists in your traffic data")
         else:
             avg_score = ip_data["ensemble_score"].mean()
             max_score = ip_data["ensemble_score"].max()
@@ -452,7 +452,7 @@ elif page == "🔍 IP Lookup":
             
             # Verdict card
             verdict_gradient = "linear-gradient(135deg, #d63031 0%, #c92a1f 100%)" if is_bot else "linear-gradient(135deg, #00b894 0%, #008c5c 100%)"
-            verdict_label = "🤖 BOT DETECTED" if is_bot else "✅ LEGITIMATE"
+            verdict_label = "BOT DETECTED" if is_bot else "LEGITIMATE"
             
             st.markdown(f"""
             <div style="background: {verdict_gradient}; color: white; border-radius: 16px; 
@@ -466,14 +466,14 @@ elif page == "🔍 IP Lookup":
             
             # Stats
             k1, k2, k3, k4 = st.columns(4)
-            k1.metric("📍 Requests", f"{req_count:,}")
-            k2.metric("📊 Avg Score", f"{avg_score:.3f}")
-            k3.metric("📈 Max Score", f"{max_score:.3f}")
-            k4.metric("🎯 Status", "BOT" if is_bot else "HUMAN")
+            k1.metric("Requests", f"{req_count:,}")
+            k2.metric("Avg Score", f"{avg_score:.3f}")
+            k3.metric("Max Score", f"{max_score:.3f}")
+            k4.metric("Status", "BOT" if is_bot else "HUMAN")
             
             st.divider()
             
-            st.subheader("📋 Full Activity")
+            st.subheader("Full Activity")
             display_cols = ["ip", "ensemble_score", "xgb_score", "iso_score", "victor_flag"] \
                           if "ip" in ip_data.columns else ["ensemble_score", "xgb_score", "iso_score", "victor_flag"]
             
@@ -483,7 +483,7 @@ elif page == "🔍 IP Lookup":
             st.dataframe(display_data, use_container_width=True, height=300)
             
             # Score distribution chart
-            st.subheader("📊 Score Distribution for This IP")
+            st.subheader("Score Distribution for This IP")
             fig_ip = px.histogram(ip_data, x="ensemble_score", nbins=20,
                                  title=f"Bot confidence scores for {ip_input}",
                                  labels={"ensemble_score": "Bot Score", "count": "Occurrences"})
@@ -493,29 +493,29 @@ elif page == "🔍 IP Lookup":
             fig_ip.update_layout(**CHART_LAYOUT, height=350)
             st.plotly_chart(fig_ip, use_container_width=True)
     else:
-        st.info("👆 Enter an IP address above to investigate its activity")
+        st.info("Enter an IP address above to investigate its activity")
 
 # ─────────────────────────────────────────────────────────────────
 # PAGE: MODEL EXPLAINABILITY
 # ─────────────────────────────────────────────────────────────────
 
-elif page == "🧠 Model Explainability":
-    st.markdown("# 🧠 Understanding the Model")
+elif page == "Model Explainability":
+    st.markdown("# Understanding the Model")
     st.markdown("_How does Victor decide if traffic is a bot? Learn the decision-making process._")
     st.divider()
     
-    st.subheader("📚 Feature Explanations")
+    st.subheader("Feature Explanations")
     st.markdown("Each of these signals helps Victor identify bot behavior:")
     
     explanations = {
-        "👤 User Agent Suspicious": "Does the User-Agent match known bot signatures (curl, python-requests, etc.)?",
-        "🔗 Has Referer": "Did the request include a Referer header? Humans usually do.",
-        "🌍 Accept-Language": "Was an Accept-Language header sent? Bots often skip it.",
-        "🔓 Hit Secret Page": "Did the IP visit the hidden honeypot endpoint `/secret-data`? Only bots do.",
-        "📏 User-Agent Length": "How long is the User-Agent string? Bots tend to use shorter ones.",
-        "⏱️ Time Gap Between Requests": "How many seconds between requests? Bots move very fast (< 1 sec).",
-        "📑 Unique Pages Visited": "How many different pages? Bots typically sweep many pages quickly.",
-        "📡 Total Requests from IP": "How many total requests from this IP? Bots make many requests.",
+        "User Agent Suspicious": "Does the User-Agent match known bot signatures (curl, python-requests, etc.)?",
+        "Has Referer": "Did the request include a Referer header? Humans usually do.",
+        "Accept-Language": "Was an Accept-Language header sent? Bots often skip it.",
+        "Hit Secret Page": "Did the IP visit the hidden honeypot endpoint `/secret-data`? Only bots do.",
+        "User-Agent Length": "How long is the User-Agent string? Bots tend to use shorter ones.",
+        "Time Gap Between Requests": "How many seconds between requests? Bots move very fast (< 1 sec).",
+        "Unique Pages Visited": "How many different pages? Bots typically sweep many pages quickly.",
+        "Total Requests from IP": "How many total requests from this IP? Bots make many requests.",
     }
     
     for feature, explanation in explanations.items():
@@ -524,7 +524,7 @@ elif page == "🧠 Model Explainability":
     st.divider()
     
     # SHAP visualizations
-    st.subheader("🔬 SHAP Analysis")
+    st.subheader("SHAP Analysis")
     st.markdown("_Feature importance as measured by SHAP values_")
     
     shap_img_global = "data/shap/global_summary.png"
@@ -542,12 +542,12 @@ elif page == "🧠 Model Explainability":
                 st.markdown("**Average Feature Impact**")
                 st.image(shap_img_bar, use_container_width=True)
     else:
-        st.warning("📊 SHAP plots not generated yet. Run `python explain.py` to generate them.")
+        st.warning("SHAP plots not generated yet. Run `python explain.py` to generate them.")
     
     shap_csv = load_shap_csv()
     if shap_csv is not None:
         st.divider()
-        st.subheader("🗺️ SHAP Value Heatmap")
+        st.subheader("SHAP Value Heatmap")
         st.markdown("_Top 200 requests showing SHAP values per feature_")
         
         shap_display = shap_csv.head(200)
@@ -564,8 +564,8 @@ elif page == "🧠 Model Explainability":
 # PAGE: RAW DATA
 # ─────────────────────────────────────────────────────────────────
 
-elif page == "📋 Raw Data":
-    st.markdown("# 📋 Raw Predictions")
+elif page == "Raw Data":
+    st.markdown("# Raw Predictions")
     st.markdown("_View and filter the complete detection log_")
     st.divider()
     
@@ -574,7 +574,7 @@ elif page == "📋 Raw Data":
     with col_filter1:
         filter_type = st.selectbox(
             "Filter by type:",
-            ["📊 All Traffic", "🤖 Bots Only", "👥 Humans Only"],
+            ["All Traffic", "Bots Only", "Humans Only"],
             label_visibility="collapsed"
         )
     
@@ -587,9 +587,9 @@ elif page == "📋 Raw Data":
     # Apply filters
     display_df = preds.copy()
     
-    if filter_type == "🤖 Bots Only":
+    if filter_type == "Bots Only":
         display_df = display_df[display_df["ensemble_score"] > threshold]
-    elif filter_type == "👥 Humans Only":
+    elif filter_type == "Humans Only":
         display_df = display_df[display_df["ensemble_score"] <= threshold]
     
     display_df = display_df[display_df["ensemble_score"] >= min_score]
@@ -601,7 +601,7 @@ elif page == "📋 Raw Data":
     # Download option
     csv = display_df.to_csv(index=False)
     st.download_button(
-        "⬇️ Download as CSV",
+        "Download as CSV",
         csv,
         "victor_predictions.csv",
         "text/csv"
@@ -611,11 +611,11 @@ elif page == "📋 Raw Data":
 # PAGE: SETTINGS
 # ─────────────────────────────────────────────────────────────────
 
-elif page == "⚙️ Settings":
-    st.markdown("# ⚙️ Settings & Configuration")
+elif page == "Settings":
+    st.markdown("# Settings & Configuration")
     st.divider()
     
-    st.markdown("### 📊 Dataset Information")
+    st.markdown("### Dataset Information")
     st.json({
         "total_records": int(len(preds)),
         "bots_flagged": int(bots_count),
@@ -626,21 +626,21 @@ elif page == "⚙️ Settings":
     
     st.divider()
     
-    st.markdown("### 🎯 Current Threshold")
+    st.markdown("### Current Threshold")
     st.info(f"Bot Score Threshold: **{threshold}**  \n"
             f"Requests scoring above this value are flagged as bots.")
     
     st.divider()
     
-    st.markdown("### 🔧 Model Configuration")
+    st.markdown("### Model Configuration")
     if metrics:
         st.json(metrics)
     else:
-        st.warning("⚠️ Metrics file not found")
+        st.warning("Metrics file not found")
     
     st.divider()
     
-    st.markdown("### 💾 File Locations")
+    st.markdown("### File Locations")
     st.code(
         """data/
 ├── features.csv
@@ -715,7 +715,7 @@ models/
 
     # Timeline (if timestamp exists)
     st.divider()
-    st.subheader("⏱️ Detection Timeline")
+    st.subheader("Detection Timeline")
     
     if "timestamp" in preds.columns:
         preds_time = preds.copy()
@@ -736,15 +736,15 @@ models/
             fig_timeline.update_layout(**CHART_LAYOUT, height=350)
             st.plotly_chart(fig_timeline, use_container_width=True)
         else:
-            st.info("⏰ No timestamp data available")
+            st.info("No timestamp data available")
     else:
-        st.info("⏰ Timestamp column not found in data")
+        st.info("Timestamp column not found in data")
 
 # ─────────────────────────────────────────────────────────────────
 # PAGE: IP LOOKUP
 # ─────────────────────────────────────────────────────────────────
 
-elif page == "🔍 IP Lookup":
+elif page == "IP Lookup":
     st.markdown("# IP Lookup")
     st.markdown("<p style='color:#6b7280;margin-top:-12px;font-size:1rem'>Check any IP address against the logged traffic data</p>", unsafe_allow_html=True)
     ip_input = st.text_input("Enter an IP address to inspect", placeholder="e.g. 127.0.0.1")
@@ -795,7 +795,7 @@ elif page == "🔍 IP Lookup":
             fig_ip.update_layout(**CHART_LAYOUT)
             st.plotly_chart(fig_ip, use_container_width=True)
     else:
-        st.info("💡 Enter an IP address above to see its full activity profile.")
+        st.info("Enter an IP address above to see its full activity profile.")
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -826,7 +826,7 @@ elif page == "Model Explainability":
 
     if shap_csv is not None:
         st.divider()
-        st.subheader("SHAP Value Heatmap (top 200 rows)")
+        st.subheader("SHAP Value Heatmap - top 200 rows")
         shap_display = shap_csv.head(200)
         shap_renamed = shap_display.rename(columns={c: c.replace("shap_", "") for c in shap_display.columns})
         fig_heat = px.imshow(
@@ -856,7 +856,7 @@ elif page == "Model Explainability":
         st.markdown(f"**`{feat}`** — {desc}")
 
 
-elif page == "📋 Raw Data":
+elif page == "Raw Data":
     st.markdown("# Raw Predictions Log")
     st.markdown("<p style='color:#6b7280;margin-top:-12px;font-size:1rem'>Full dataset with scores, flags, and filtering</p>", unsafe_allow_html=True)
     st.divider()
