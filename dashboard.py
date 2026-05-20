@@ -210,6 +210,14 @@ if preds is None or features is None:
              "- `python train_model.py`")
     st.stop()
 
+# Calculate metrics globally for use across all pages
+total = len(preds)
+bots_count = int((preds["victor_flag"] == 1).sum())
+human_count = total - bots_count
+bot_pct = (bots_count / total * 100) if total > 0 else 0
+human_pct = (human_count / total * 100) if total > 0 else 0
+avg_bot_score = preds["ensemble_score"].mean()
+
 # ─────────────────────────────────────────────────────────────────
 # SIDEBAR - Navigation & Settings
 # ─────────────────────────────────────────────────────────────────
@@ -239,13 +247,9 @@ with st.sidebar:
     st.divider()
     
     st.markdown("### Quick Stats")
-    total = len(preds)
-    bots_count = int((preds["victor_flag"] == 1).sum())
-    human_count = total - bots_count
-    
     col_a, col_b = st.columns(2)
-    col_a.metric("Bots", f"{bots_count:,}", f"{bots_count/total*100:.1f}%")
-    col_b.metric("Humans", f"{human_count:,}", f"{human_count/total*100:.1f}%")
+    col_a.metric("Bots", f"{bots_count:,}", f"{bot_pct:.1f}%")
+    col_b.metric("Humans", f"{human_count:,}", f"{human_pct:.1f}%")
     
     st.divider()
     
@@ -279,10 +283,6 @@ if page == "Dashboard":
     
     # Key metrics with humanized display
     m1, m2, m3, m4 = st.columns(4)
-    
-    bot_pct = (bots_count / total * 100) if total > 0 else 0
-    human_pct = (human_count / total * 100) if total > 0 else 0
-    avg_bot_score = preds["ensemble_score"].mean()
     
     with m1:
         st.metric(
@@ -656,89 +656,6 @@ models/
 """,
         language="bash"
     )
-
-    st.divider()
-
-    avg_bot_score = round(preds["ensemble_score"].mean(), 3)
-    c1.metric("Total Requests",  f"{total:,}")
-    c2.metric("Bots Flagged",    f"{flagged_bots:,}",  delta=f"{bot_pct:.1f}%",   delta_color="inverse")
-    c3.metric("Clean (Human)",   f"{clean_humans:,}",  delta=f"{human_pct:.1f}%")
-    c4.metric("Avg Bot Score",   avg_bot_score,         delta="threshold 0.5",     delta_color="off")
-
-    st.divider()
-
-    left, right = st.columns(2)
-
-    with left:
-        st.subheader("Traffic Breakdown")
-        pie_df = pd.DataFrame({"Type": ["Bot", "Human"], "Count": [flagged_bots, clean_humans]})
-        fig_pie = px.pie(pie_df, names="Type", values="Count",
-                         color="Type",
-                         color_discrete_map={"Bot": "#dc2626", "Human": "#16a34a"},
-                         hole=0.5)
-        fig_pie.update_traces(textposition="inside", textinfo="percent+label",
-                              marker=dict(line=dict(color="#ffffff", width=3)))
-        fig_pie.update_layout(**CHART_LAYOUT)
-        fig_pie.update_layout(**CHART_LAYOUT)
-        st.plotly_chart(fig_pie, use_container_width=True)
-
-    with right:
-        st.subheader("Bot Confidence Score Distribution")
-        fig_hist = px.histogram(preds, x="ensemble_score", nbins=35,
-                                color_discrete_sequence=["#3b82f6"],
-                                labels={"ensemble_score": "Bot Probability"})
-        fig_hist.add_vline(x=threshold, line_dash="dash", line_color="#dc2626",
-                           annotation_text=f"Threshold ({threshold})",
-                           annotation_font_color="#dc2626")
-        fig_hist.update_layout(**CHART_LAYOUT)
-        st.plotly_chart(fig_hist, use_container_width=True)
-
-    st.divider()
-
-    st.subheader("Feature Comparison — Bots vs Humans")
-
-    bot_means   = features[features["label"] == 1][FEATURE_COLS].mean()
-    human_means = features[features["label"] == 0][FEATURE_COLS].mean()
-    compare_df  = pd.DataFrame({
-        "Feature": FEATURE_COLS,
-        "Bot":     bot_means.values,
-        "Human":   human_means.values
-    })
-
-    fig_bar = go.Figure()
-    fig_bar.add_trace(go.Bar(name="Bot",   x=compare_df["Feature"], y=compare_df["Bot"],
-                             marker_color="#dc2626", marker_opacity=0.85))
-    fig_bar.add_trace(go.Bar(name="Human", x=compare_df["Feature"], y=compare_df["Human"],
-                             marker_color="#16a34a", marker_opacity=0.85))
-    fig_bar.update_layout(barmode="group", xaxis_tickangle=-20, **CHART_LAYOUT)
-    st.plotly_chart(fig_bar, use_container_width=True)
-
-    # Timeline (if timestamp exists)
-    st.divider()
-    st.subheader("Detection Timeline")
-    
-    if "timestamp" in preds.columns:
-        preds_time = preds.copy()
-        preds_time["timestamp"] = pd.to_datetime(preds_time["timestamp"], errors="coerce")
-        preds_time = preds_time.dropna(subset=["timestamp"]).sort_values("timestamp")
-        
-        if len(preds_time) > 0:
-            fig_timeline = px.line(
-                preds_time,
-                x="timestamp",
-                y="ensemble_score",
-                hover_data={"ensemble_score": ":.3f"},
-                labels={"timestamp": "Time", "ensemble_score": "Bot Score"}
-            )
-            fig_timeline.add_hline(y=threshold, line_dash="dash", line_color="#d63031", 
-                                   annotation_text="Threshold")
-            fig_timeline.update_traces(line=dict(color="#3498db", width=2))
-            fig_timeline.update_layout(**CHART_LAYOUT, height=350)
-            st.plotly_chart(fig_timeline, use_container_width=True)
-        else:
-            st.info("No timestamp data available")
-    else:
-        st.info("Timestamp column not found in data")
 
 # ─────────────────────────────────────────────────────────────────
 # PAGE: IP LOOKUP
