@@ -1,10 +1,10 @@
+# dashboard.py
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import json, os
 from datetime import datetime
-from database import TrafficDatabase
 
 st.set_page_config(
     page_title="Victor — Bot Detection",
@@ -15,245 +15,45 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important; }
-    
-    /* Main background - modern gradient */
-    .stApp {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        color: #2d3436;
-    }
-    
-    /* Sidebar styling */
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #2d3436 0%, #636e72 100%);
-        border-right: 3px solid #0984e3;
-    }
-    
-    [data-testid="stSidebar"] * { color: #fff !important; }
-    [data-testid="stSidebar"] h2 { font-size: 1.6rem !important; margin-bottom: 8px !important; font-weight: 800 !important; }
-    [data-testid="stSidebar"] [role="radio"] label { color: #f1f2f6 !important; font-weight: 600 !important; }
-    
-    /* Card styling */
-    [data-testid="stMetric"] {
-        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-        border: 2px solid #e0e6ed;
-        border-radius: 16px;
-        padding: 24px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-        transition: all 0.3s ease;
-    }
-    
-    [data-testid="stMetric"]:hover {
-        border-color: #0984e3;
-        box-shadow: 0 12px 32px rgba(9, 132, 227, 0.15);
-        transform: translateY(-2px);
-    }
-    
-    [data-testid="stMetricLabel"] { 
-        color: #636e72 !important; 
-        font-size: 0.8rem !important; 
-        font-weight: 700 !important; 
-        letter-spacing: 1px !important;
-        text-transform: uppercase !important;
-    }
-    
-    [data-testid="stMetricValue"] { 
-        color: #2d3436 !important; 
-        font-size: 2.4rem !important; 
-        font-weight: 800 !important; 
-    }
-    
-    /* Headers */
-    h1, h2, h3 { color: #2d3436 !important; font-weight: 800 !important; }
-    h1 { font-size: 2.8rem !important; margin-top: 0 !important; }
-    h2 { font-size: 1.8rem !important; margin-top: 24px !important; }
-    
-    /* Dividers */
-    hr { border-color: #dfe6e9 !important; margin: 24px 0 !important; }
-    
-    /* Alerts */
-    .stSuccess, [data-testid="stSuccess"] { background: #d4edda !important; border: 2px solid #28a745 !important; }
-    .stWarning, [data-testid="stWarning"] { background: #fff3cd !important; border: 2px solid #ffc107 !important; }
-    .stError, [data-testid="stError"] { background: #f8d7da !important; border: 2px solid #dc3545 !important; }
-    .stInfo, [data-testid="stInfo"] { background: #d1ecf1 !important; border: 2px solid #17a2b8 !important; }
-    
-    /* Status badges */
-    .badge-bot {
-        background: linear-gradient(135deg, #ff7675 0%, #d63031 100%);
-        color: white;
-        padding: 6px 16px;
-        border-radius: 20px;
-        font-weight: 700;
-        font-size: 0.85rem;
-        box-shadow: 0 4px 12px rgba(214, 48, 49, 0.3);
-    }
-    
-    .badge-human {
-        background: linear-gradient(135deg, #55efc4 0%, #00b894 100%);
-        color: white;
-        padding: 6px 16px;
-        border-radius: 20px;
-        font-weight: 700;
-        font-size: 0.85rem;
-        box-shadow: 0 4px 12px rgba(0, 184, 148, 0.3);
-    }
-    
-    /* Live indicator */
-    .live-indicator {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
-        background: #d63031;
-        border-radius: 50%;
-        animation: pulse 2s infinite;
-        margin-right: 8px;
-    }
-    
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
-    }
-    
-    /* Charts */
-    .js-plotly-plot { border-radius: 12px; overflow: hidden; }
-    
-    /* Buttons */
-    .stButton > button {
-        background: linear-gradient(135deg, #0984e3 0%, #0770d4 100%);
-        color: white !important;
-        border: none !important;
-        border-radius: 12px !important;
-        font-weight: 700 !important;
-        padding: 12px 24px !important;
-        box-shadow: 0 4px 12px rgba(9, 132, 227, 0.3) !important;
-        transition: all 0.3s ease !important;
-    }
-    
-    .stButton > button:hover {
-        box-shadow: 0 8px 20px rgba(9, 132, 227, 0.5) !important;
-        transform: translateY(-2px) !important;
-    }
-    
-    /* Text input */
-    .stTextInput input {
-        border: 2px solid #dfe6e9 !important;
-        border-radius: 8px !important;
-        padding: 12px !important;
-    }
-    
-    .stTextInput input:focus {
-        border-color: #0984e3 !important;
-        box-shadow: 0 0 0 3px rgba(9, 132, 227, 0.1) !important;
-    }
-    
-    /* Sidebar metric visibility - override defaults */
-    [data-testid="stSidebar"] [data-testid="stMetric"] {
-        background: rgba(255, 255, 255, 0.15) !important;
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-        backdrop-filter: blur(10px);
-    }
-    
-    [data-testid="stSidebar"] [data-testid="stMetricLabel"] { 
-        color: #e0e0e0 !important;
-        font-size: 0.75rem !important;
-    }
-    
-    [data-testid="stSidebar"] [data-testid="stMetricValue"] { 
-        color: #ffffff !important;
-        font-size: 1.8rem !important;
-    }
-    
-    [data-testid="stSidebar"] [data-testid="stMetricDelta"] {
-        color: #a8e6cf !important;
-    }
-    
-    /* Activity Feed Styles */
-    .activity-feed {
-        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-        border-left: 4px solid #0984e3;
-        border-radius: 8px;
-        padding: 20px;
-        margin: 12px 0;
-    }
-    
-    .activity-item {
-        padding: 12px;
-        margin: 10px 0;
-        background: white;
-        border-radius: 6px;
-        border: 1px solid #e0e6ed;
-        transition: all 0.2s ease;
-    }
-    
-    .activity-item:hover {
-        border-color: #0984e3;
-        box-shadow: 0 4px 12px rgba(9, 132, 227, 0.1);
-        transform: translateX(4px);
-    }
-    
-    .activity-label {
-        font-size: 0.85rem;
-        color: #636e72;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    
-    .activity-value {
-        font-size: 1rem;
-        color: #2d3436;
-        font-weight: 500;
-        margin-top: 4px;
-    }
-    
-    .bot-badge {
-        display: inline-block;
-        background: #ffe0e0;
-        color: #d63031;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        font-weight: 700;
-    }
-    
-    .human-badge {
-        display: inline-block;
-        background: #e0f7e0;
-        color: #00b894;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        font-weight: 700;
-    }
-
+* { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important; }
+.stApp { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); color: #2d3436; }
+[data-testid="stSidebar"] { background: linear-gradient(180deg, #2d3436 0%, #636e72 100%); border-right: 3px solid #0984e3; }
+[data-testid="stSidebar"] * { color: #fff !important; }
+[data-testid="stSidebar"] h2 { font-size: 1.6rem !important; margin-bottom: 8px !important; font-weight: 800 !important; }
+[data-testid="stMetric"] { background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); border: 2px solid #e0e6ed; border-radius: 16px; padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); transition: all 0.3s ease; }
+[data-testid="stMetric"]:hover { border-color: #0984e3; box-shadow: 0 12px 32px rgba(9,132,227,0.15); transform: translateY(-2px); }
+[data-testid="stMetricLabel"] { color: #636e72 !important; font-size: 0.8rem !important; font-weight: 700 !important; letter-spacing: 1px !important; text-transform: uppercase !important; }
+[data-testid="stMetricValue"] { color: #2d3436 !important; font-size: 2.4rem !important; font-weight: 800 !important; }
+h1, h2, h3 { color: #2d3436 !important; font-weight: 800 !important; }
+h1 { font-size: 2.8rem !important; margin-top: 0 !important; }
+h2 { font-size: 1.8rem !important; margin-top: 24px !important; }
+hr { border-color: #dfe6e9 !important; margin: 24px 0 !important; }
+.stButton > button { background: linear-gradient(135deg, #0984e3 0%, #0770d4 100%); color: white !important; border: none !important; border-radius: 12px !important; font-weight: 700 !important; padding: 12px 24px !important; box-shadow: 0 4px 12px rgba(9,132,227,0.3) !important; transition: all 0.3s ease !important; }
+[data-testid="stSidebar"] [data-testid="stMetric"] { background: rgba(255,255,255,0.15) !important; border: 1px solid rgba(255,255,255,0.3) !important; }
+[data-testid="stSidebar"] [data-testid="stMetricValue"] { color: #ffffff !important; font-size: 1.8rem !important; }
+.activity-feed { background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border-left: 4px solid #0984e3; border-radius: 8px; padding: 20px; margin: 12px 0; }
+.activity-item { padding: 12px; margin: 10px 0; background: white; border-radius: 6px; border: 1px solid #e0e6ed; }
 </style>
 """, unsafe_allow_html=True)
-
-# ─────────────────────────────────────────────────────────────────
-# CHART LAYOUT CONFIG
-# ─────────────────────────────────────────────────────────────────
 
 CHART_LAYOUT = dict(
     paper_bgcolor="#ffffff",
     plot_bgcolor="#f8f9fa",
     font=dict(color="#2d3436", family="system-ui, -apple-system, sans-serif", size=12),
-    xaxis=dict(gridcolor="#e0e6ed", zerolinecolor="#e0e6ed", showgrid=True),
-    yaxis=dict(gridcolor="#e0e6ed", zerolinecolor="#e0e6ed", showgrid=True),
-    legend=dict(bgcolor="rgba(255,255,255,0.9)", font=dict(color="#2d3436", size=11), 
-                bordercolor="#dfe6e9", borderwidth=2),
+    xaxis=dict(gridcolor="#e0e6ed", zerolinecolor="#e0e6ed"),
+    yaxis=dict(gridcolor="#e0e6ed", zerolinecolor="#e0e6ed"),
+    legend=dict(bgcolor="rgba(255,255,255,0.9)", bordercolor="#dfe6e9", borderwidth=2),
     margin=dict(t=40, b=50, l=50, r=20),
     hovermode="x unified",
 )
 
-# ─────────────────────────────────────────────────────────────────
-# CACHING & DATA LOADING
-# ─────────────────────────────────────────────────────────────────
-
-@st.cache_data(ttl=5)  # 5 second cache for live updates
+# ──────────────────────────────────────────────────────────────────
+# DATA LOADING
+# ──────────────────────────────────────────────────────────────────
+@st.cache_data(ttl=5)
 def load_data():
-    """Load predictions and features from files"""
     try:
-        preds = pd.read_csv("data/predictions.csv")
+        preds    = pd.read_csv("data/predictions.csv")
         features = pd.read_csv("data/features.csv")
         return preds, features
     except FileNotFoundError:
@@ -261,7 +61,6 @@ def load_data():
 
 @st.cache_data(ttl=10)
 def load_metrics():
-    """Load model metrics"""
     if os.path.exists("data/model_metrics.json"):
         with open("data/model_metrics.json") as f:
             return json.load(f)
@@ -269,7 +68,6 @@ def load_metrics():
 
 @st.cache_data(ttl=10)
 def load_shap_csv():
-    """Load SHAP values for explainability"""
     path = "data/shap/shap_values.csv"
     if os.path.exists(path):
         return pd.read_csv(path)
@@ -285,662 +83,356 @@ preds, features = load_data()
 metrics = load_metrics()
 
 if preds is None or features is None:
-    st.error("Data files not found! Run the pipeline first:\n"
-             "- `python honeypot.py` (in separate terminal)\n"
-             "- `python simulate_traffic.py`\n"
-             "- `python feature_engineering.py`\n"
-             "- `python train_model.py`")
+    st.error(
+        "Data files not found! Pipeline pehle chalao:\n"
+        "- `python honeypot.py` (alag terminal)\n"
+        "- `python simulate_traffic.py`\n"
+        "- `python feature_engineering.py`\n"
+        "- `python train_model.py`"
+    )
     st.stop()
 
-# Calculate metrics globally for use across all pages
-total = len(preds)
-bots_count = int((preds["victor_flag"] == 1).sum())
-human_count = total - bots_count
-bot_pct = (bots_count / total * 100) if total > 0 else 0
-human_pct = (human_count / total * 100) if total > 0 else 0
+total         = len(preds)
+bots_count    = int((preds["victor_flag"] == 1).sum())
+human_count   = total - bots_count
+bot_pct       = (bots_count / total * 100) if total > 0 else 0
+human_pct     = (human_count / total * 100) if total > 0 else 0
 avg_bot_score = preds["ensemble_score"].mean()
 
-# ─────────────────────────────────────────────────────────────────
-# SIDEBAR - Navigation & Settings
-# ─────────────────────────────────────────────────────────────────
-
+# ──────────────────────────────────────────────────────────────────
+# SIDEBAR
+# ──────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## VICTOR")
-    st.markdown("**Your Bot Detection Watchdog**")
-    st.markdown("_Keeps your traffic clean_")
+    st.markdown("## ⚔ VICTOR")
+    st.markdown("**Bot Detection Watchdog**")
     st.divider()
-    
-    # Live indicator
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        st.markdown('<span class="live-indicator"></span>', unsafe_allow_html=True)
-    with col2:
-        st.markdown("**Live** • Just now")
-    
-    st.divider()
-    
-    st.markdown("### Where to?")
+
     page = st.radio(
-        "Select View:",
-        ["Dashboard", "Timeline", "IP Lookup", "Model Explainability", "Raw Data", "Settings"],
+        "Navigate:",
+        ["Dashboard", "IP Lookup", "Model Explainability", "Raw Data", "Settings"],
         label_visibility="collapsed"
     )
-    
     st.divider()
-    
-    st.markdown("### The Numbers")
+
+    st.markdown("### Live Stats")
     col_a, col_b = st.columns(2)
-    col_a.metric("Bots", f"{bots_count:,}", f"{bot_pct:.1f}%")
+    col_a.metric("Bots",   f"{bots_count:,}",  f"{bot_pct:.1f}%")
     col_b.metric("Humans", f"{human_count:,}", f"{human_pct:.1f}%")
-    
     st.divider()
-    
+
     if metrics:
         st.markdown("### Model Quality")
-        st.metric("XGBoost AUC", f"{metrics.get('xgb_auc', 0):.3f}")
-        st.metric("Isolation Forest", f"{metrics.get('iso_auc', 0):.3f}")
-    
-    st.divider()
-    
-    threshold = st.slider(
-        "When to flag as bot?",
-        0.0, 1.0, 0.5, 0.05,
-        help="Adjust this to be more or less sensitive"
-    )
-    
-    st.markdown("### Refresh")
-    refresh_now = st.button("Get fresh data", use_container_width=True)
-    if refresh_now:
+        st.metric("XGBoost AUC",       f"{metrics.get('xgb_auc', 0):.3f}")
+        st.metric("Isolation Forest",  f"{metrics.get('iso_auc', 0):.3f}")
+        st.divider()
+
+    threshold = st.slider("Bot score threshold", 0.0, 1.0, 0.5, 0.05)
+
+    if st.button("🔄 Refresh Data", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
 
-# ─────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────
 # PAGE: DASHBOARD
-# ─────────────────────────────────────────────────────────────────
-
+# ──────────────────────────────────────────────────────────────────
 if page == "Dashboard":
     st.markdown("# Victor Dashboard")
-    st.markdown("_Real-time bot detection powered by ensemble ML • See what's happening right now_")
+    st.markdown("_Real-time bot detection powered by ensemble ML_")
     st.divider()
-    
-    # Key metrics with humanized display
+
     m1, m2, m3, m4 = st.columns(4)
-    
-    with m1:
-        st.metric(
-            "Total Requests",
-            f"{total:,}",
-            "incoming stream"
-        )
-    
-    with m2:
-        st.metric(
-            "Bots Detected",
-            f"{bots_count:,}",
-            f"{bot_pct:.1f}%",
-            delta_color="inverse"
-        )
-    
-    with m3:
-        st.metric(
-            "Clean Traffic",
-            f"{human_count:,}",
-            f"{human_pct:.1f}%"
-        )
-    
-    with m4:
-        st.metric(
-            "Avg Score",
-            f"{avg_bot_score:.3f}",
-            "threshold: 0.50"
-        )
-    
+    m1.metric("Total Requests", f"{total:,}")
+    m2.metric("Bots Detected",  f"{bots_count:,}", f"{bot_pct:.1f}%",   delta_color="inverse")
+    m3.metric("Clean Traffic",  f"{human_count:,}", f"{human_pct:.1f}%")
+    m4.metric("Avg Score",      f"{avg_bot_score:.3f}", "threshold: 0.50")
+
     st.divider()
-    
-    # Charts row 1
+
     col_left, col_right = st.columns(2)
-    
+
     with col_left:
         st.subheader("Traffic Breakdown")
         pie_data = pd.DataFrame({
-            "Type": ["Bots", "Humans"],
+            "Type":  ["Bots", "Humans"],
             "Count": [bots_count, human_count],
-            "Pct": [bot_pct, human_pct]
         })
         fig_pie = px.pie(
-            pie_data,
-            names="Type",
-            values="Count",
+            pie_data, names="Type", values="Count",
             color_discrete_map={"Bots": "#d63031", "Humans": "#00b894"},
             hole=0.4
         )
-        fig_pie.update_traces(
-            textposition="inside",
-            textinfo="percent+label",
-            marker=dict(line=dict(color="#ffffff", width=4))
-        )
+        fig_pie.update_traces(textposition="inside", textinfo="percent+label",
+                              marker=dict(line=dict(color="#ffffff", width=4)))
         fig_pie.update_layout(**CHART_LAYOUT, height=400)
         st.plotly_chart(fig_pie, use_container_width=True)
-    
+
     with col_right:
-        st.subheader("Bot Confidence Scores")
+        st.subheader("Bot Confidence Score Distribution")
         fig_hist = px.histogram(
-            preds,
-            x="ensemble_score",
-            nbins=40,
-            title="Distribution of bot detection confidence",
+            preds, x="ensemble_score", nbins=40,
             labels={"ensemble_score": "Bot Probability", "count": "Requests"}
         )
-        fig_hist.add_vline(
-            x=threshold,
-            line_dash="dash",
-            line_color="#d63031",
-            annotation_text=f"Threshold: {threshold:.2f}",
-            annotation_position="top right"
-        )
+        fig_hist.add_vline(x=threshold, line_dash="dash", line_color="#d63031",
+                           annotation_text=f"Threshold: {threshold:.2f}",
+                           annotation_position="top right")
         fig_hist.update_traces(marker_color="#3498db")
         fig_hist.update_layout(**CHART_LAYOUT, height=400)
         st.plotly_chart(fig_hist, use_container_width=True)
-    
+
     st.divider()
-    
-    # Feature importance
     st.subheader("What Separates Bots from Real Users?")
-    st.markdown("_These behaviors show the biggest differences_")
-    
-    bot_means = features[features["label"] == 1][FEATURE_COLS].mean()
+
+    bot_means   = features[features["label"] == 1][FEATURE_COLS].mean()
     human_means = features[features["label"] == 0][FEATURE_COLS].mean()
-    
-    compare_df = pd.DataFrame({
-        "Feature": [col.replace("_", " ").title() for col in FEATURE_COLS],
-        "Bots": bot_means.values,
-        "Humans": human_means.values
+    compare_df  = pd.DataFrame({
+        "Feature": [c.replace("_", " ").title() for c in FEATURE_COLS],
+        "Bots":    bot_means.values,
+        "Humans":  human_means.values,
     })
-    
     fig_bar = go.Figure()
-    fig_bar.add_trace(go.Bar(
-        name="Bots",
-        x=compare_df["Feature"],
-        y=compare_df["Bots"],
-        marker=dict(color="#d63031", opacity=0.85, line=dict(color="#c92a1f", width=1.5))
-    ))
-    fig_bar.add_trace(go.Bar(
-        name="Humans",
-        x=compare_df["Feature"],
-        y=compare_df["Humans"],
-        marker=dict(color="#00b894", opacity=0.85, line=dict(color="#008c5c", width=1.5))
-    ))
+    fig_bar.add_trace(go.Bar(name="Bots",   x=compare_df["Feature"], y=compare_df["Bots"],
+                             marker=dict(color="#d63031", opacity=0.85)))
+    fig_bar.add_trace(go.Bar(name="Humans", x=compare_df["Feature"], y=compare_df["Humans"],
+                             marker=dict(color="#00b894", opacity=0.85)))
     fig_bar.update_layout(barmode="group", xaxis_tickangle=-45, **CHART_LAYOUT, height=450)
     st.plotly_chart(fig_bar, use_container_width=True)
-    
-    # Timeline (if timestamp exists)
+
     st.divider()
     st.subheader("When Do Bots Attack?")
-    st.markdown("_Bot confidence scores over time_")
-    
     if "timestamp" in preds.columns:
         preds_time = preds.copy()
         preds_time["timestamp"] = pd.to_datetime(preds_time["timestamp"], errors="coerce")
         preds_time = preds_time.dropna(subset=["timestamp"]).sort_values("timestamp")
-        
         if len(preds_time) > 0:
-            fig_timeline = px.line(
-                preds_time,
-                x="timestamp",
-                y="ensemble_score",
-                hover_data={"ensemble_score": ":.3f"},
-                labels={"timestamp": "Time", "ensemble_score": "Bot Score"}
-            )
-            fig_timeline.add_hline(y=threshold, line_dash="dash", line_color="#d63031", 
-                                   annotation_text="Threshold")
-            fig_timeline.update_traces(line=dict(color="#3498db", width=2))
-            fig_timeline.update_layout(**CHART_LAYOUT, height=350)
-            st.plotly_chart(fig_timeline, use_container_width=True)
-        else:
-            st.info("No timestamp data available")
+            fig_tl = px.line(preds_time, x="timestamp", y="ensemble_score",
+                             labels={"timestamp": "Time", "ensemble_score": "Bot Score"})
+            fig_tl.add_hline(y=threshold, line_dash="dash", line_color="#d63031",
+                             annotation_text="Threshold")
+            fig_tl.update_traces(line=dict(color="#3498db", width=2))
+            fig_tl.update_layout(**CHART_LAYOUT, height=350)
+            st.plotly_chart(fig_tl, use_container_width=True)
     else:
-        st.info("Timestamp column not found in data")    
-    # ─────────────────────────────────────────────────────────────────
-    # REAL-TIME ACTIVITY SECTION
-    # ─────────────────────────────────────────────────────────────────
-    
+        st.info("Timestamp column not found in data")
+
     st.divider()
     st.markdown("## Recent Activity")
-    st.markdown("_Latest requests flowing through Victor right now_")
-    
-    # Get recent requests (last 10)
-    recent_requests = preds.tail(10).copy()
-    
-    if len(recent_requests) > 0:
-        # Create a more humanized real-time activity feed
-        activity_cols = st.columns(1)
-        
-        with activity_cols[0]:
-            # Display activity feed
-            activity_html = '<div class="activity-feed">'
-            
-            for idx, row in recent_requests.iterrows():
-                score = row.get("ensemble_score", 0)
-                is_bot = score > threshold
-                badge = 'BOT' if is_bot else 'HUMAN'
-                badge_class = 'bot-badge' if is_bot else 'human-badge'
-                score_color = '#d63031' if is_bot else '#00b894'
-                
-                ip = row.get("ip", "Unknown")
-                requests_from_ip = len(preds[preds.get("ip", pd.Series()) == ip]) if "ip" in preds.columns else "—"
-                
-                activity_html += f'<div class="activity-item"><div style="display: flex; justify-content: space-between; align-items: start;"><div><div class="activity-label">Request from</div><div class="activity-value"><code>{ip}</code></div></div><div style="text-align: right;"><span class="{badge_class}">{badge}</span><div class="activity-value" style="margin-top: 6px; font-size: 0.9rem; color: #636e72;">Score: <b style="color: {score_color};">{score:.2%}</b></div></div></div><div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e6ed; font-size: 0.85rem; color: #636e72;">{requests_from_ip} total requests from this IP</div></div>'
-            
-            activity_html += '</div>'
-            st.markdown(activity_html, unsafe_allow_html=True)
-    
+    recent = preds.tail(10).copy()
+    activity_html = '<div class="activity-feed">'
+    for _, row in recent.iterrows():
+        score  = row.get("ensemble_score", 0)
+        is_bot = score > threshold
+        badge  = "BOT" if is_bot else "HUMAN"
+        color  = "#d63031" if is_bot else "#00b894"
+        bg     = "#ffe0e0" if is_bot else "#e0f7e0"
+        ip     = row.get("ip", "Unknown")
+        activity_html += f"""
+        <div class="activity-item" style="border-left: 4px solid {color};">
+          <div style="display:flex; justify-content:space-between;">
+            <code style="color:#2d3436;">{ip}</code>
+            <span style="background:{bg}; color:{color}; padding:2px 10px;
+                  border-radius:12px; font-weight:700; font-size:0.8rem;">{badge}</span>
+          </div>
+          <div style="margin-top:6px; color:#636e72; font-size:0.85rem;">
+            Score: <b style="color:{color};">{score:.2%}</b>
+          </div>
+        </div>"""
+    activity_html += '</div>'
+    st.markdown(activity_html, unsafe_allow_html=True)
+
+# ──────────────────────────────────────────────────────────────────
+# PAGE: IP LOOKUP
+# ──────────────────────────────────────────────────────────────────
+elif page == "IP Lookup":
+    st.markdown("# IP Lookup")
+    st.markdown("_Kisi bhi IP ka poora record dekho_")
     st.divider()
-    
-    # Quick insights section
-    st.markdown("## Quick Insights")
-    
-    insight_cols = st.columns(3)
-    
-    # Insight 1: Most active IP
-    with insight_cols[0]:
-        if "ip" in preds.columns:
-            top_ip = preds["ip"].value_counts().head(1)
-            if len(top_ip) > 0:
-                top_ip_addr = top_ip.index[0]
-                top_ip_count = top_ip.values[0]
-                top_ip_avg_score = preds[preds["ip"] == top_ip_addr]["ensemble_score"].mean()
-                top_ip_status = "Bot" if top_ip_avg_score > threshold else "Human"
-                
+
+    ip_input = st.text_input("IP address daalo:", placeholder="e.g. 127.0.0.1")
+
+    if ip_input:
+        has_ip_col = "ip" in preds.columns
+        if not has_ip_col:
+            st.error("predictions.csv mein 'ip' column nahi hai. "
+                     "feature_engineering.py dobara chalao.")
+        else:
+            ip_data = preds[preds["ip"] == ip_input]
+
+            if len(ip_data) == 0:
+                st.warning(f"**{ip_input}** ke liye koi record nahi mila.")
+            else:
+                avg_score = ip_data["ensemble_score"].mean()
+                max_score = ip_data["ensemble_score"].max()
+                req_count = len(ip_data)
+                is_bot    = avg_score > threshold
+
+                verdict_color = "#d63031" if is_bot else "#00b894"
+                verdict_label = "🤖 BOT DETECTED" if is_bot else "✅ LEGITIMATE"
+                verdict_bg    = "#fee2e2" if is_bot else "#dcfce7"
+
                 st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); 
-                            border-radius: 8px; padding: 16px; border: 1px solid #90caf9;">
-                    <div style="color: #1565c0; font-weight: 600; font-size: 0.9rem;">MOST ACTIVE</div>
-                    <div style="color: #0d47a1; font-size: 1.2rem; font-weight: 700; margin: 8px 0;">{top_ip_addr}</div>
-                    <div style="color: #42a5f5; font-size: 0.9rem;">
-                        {top_ip_count} requests • {top_ip_status}
-                    </div>
+                <div style="background:{verdict_bg}; border:2px solid {verdict_color};
+                     border-radius:12px; padding:24px; margin-bottom:20px;">
+                  <h3 style="color:{verdict_color}; margin:0;">{verdict_label}</h3>
+                  <p style="color:#374151; margin:8px 0 0;">
+                    IP: <b>{ip_input}</b> &nbsp;·&nbsp;
+                    {req_count} requests &nbsp;·&nbsp;
+                    Avg score: <b style="color:{verdict_color};">{avg_score:.3f}</b>
+                  </p>
                 </div>
                 """, unsafe_allow_html=True)
-    
-    # Insight 2: Detection accuracy
-    with insight_cols[1]:
-        detection_rate = (bots_count / total * 100) if total > 0 else 0
-        
-        st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); 
-                    border-radius: 8px; padding: 16px; border: 1px solid #ce93d8;">
-            <div style="color: #6a1b9a; font-weight: 600; font-size: 0.9rem;">BOT DETECTION RATE</div>
-            <div style="color: #4a148c; font-size: 1.2rem; font-weight: 700; margin: 8px 0;">{detection_rate:.1f}%</div>
-            <div style="color: #8e24aa; font-size: 0.9rem;">
-                {bots_count:,} bots out of {total:,}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Insight 3: Average confidence
-    with insight_cols[2]:
-        high_confidence_bots = len(preds[preds["ensemble_score"] > 0.9])
-        
-        st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); 
-                    border-radius: 8px; padding: 16px; border: 1px solid #a5d6a7;">
-            <div style="color: #1b5e20; font-weight: 600; font-size: 0.9rem;">HIGH CONFIDENCE</div>
-            <div style="color: #0d3817; font-size: 1.2rem; font-weight: 700; margin: 8px 0;">{high_confidence_bots:,}</div>
-            <div style="color: #388e3c; font-size: 0.9rem;">
-                Detected with 90%+ confidence
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────────
-# PAGE: TIMELINE
-# ─────────────────────────────────────────────────────────────────
+                k1, k2, k3 = st.columns(3)
+                k1.metric("Requests", f"{req_count:,}")
+                k2.metric("Avg Score", f"{avg_score:.3f}")
+                k3.metric("Max Score", f"{max_score:.3f}")
 
-elif page == "Timeline":
-    st.markdown("# Traffic Timeline")
-    st.markdown("_Hourly traffic patterns and bot activity trends_")
-    st.divider()
-    
-    db = TrafficDatabase()
-    timeline_stats = db.get_timeline_stats()
-    
-    if len(timeline_stats) > 0:
-        # Convert hour to datetime for proper plotting
-        timeline_stats['hour'] = pd.to_datetime(timeline_stats['hour'])
-        
-        # Timeline chart - Total requests
-        st.subheader("Hourly Traffic Volume")
-        fig_timeline = px.area(
-            timeline_stats,
-            x="hour",
-            y=["bot_count", "human_count"],
-            labels={"hour": "Time", "value": "Requests", "variable": "Type"},
-            color_discrete_map={"bot_count": "#d63031", "human_count": "#00b894"}
-        )
-        fig_timeline.update_layout(**CHART_LAYOUT, height=400)
-        st.plotly_chart(fig_timeline, use_container_width=True)
-        
-        st.divider()
-        
-        # Bot detection rate over time
-        st.subheader("Bot Detection Rate Trend")
-        timeline_stats['bot_rate'] = (
-            timeline_stats['bot_count'] / 
-            (timeline_stats['total_requests'] + 1) * 100
-        )
-        
-        fig_rate = px.line(
-            timeline_stats,
-            x="hour",
-            y="bot_rate",
-            labels={"hour": "Time", "bot_rate": "Bot %"},
-            markers=True
-        )
-        fig_rate.update_traces(line=dict(color="#d63031", width=3), marker=dict(size=8))
-        fig_rate.update_layout(**CHART_LAYOUT, height=350)
-        st.plotly_chart(fig_rate, use_container_width=True)
-        
-        st.divider()
-        
-        # Timeline statistics
-        st.subheader("Detailed Timeline Statistics")
-        display_timeline = timeline_stats.copy()
-        display_timeline['hour'] = display_timeline['hour'].astype(str)
-        display_timeline = display_timeline.round(2)
-        st.dataframe(display_timeline, use_container_width=True, height=400)
-        
-        st.divider()
-        
-        # Insights
-        st.subheader("Timeline Insights")
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            peak_hour = timeline_stats.loc[timeline_stats['total_requests'].idxmax()]
-            st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); 
-                        border-radius: 8px; padding: 16px; border: 1px solid #90caf9;">
-                <div style="color: #1565c0; font-weight: 600; font-size: 0.9rem;">PEAK HOUR</div>
-                <div style="color: #0d47a1; font-size: 1.2rem; font-weight: 700; margin: 8px 0;">
-                    {peak_hour['total_requests']:.0f} requests
-                </div>
-                <div style="color: #42a5f5; font-size: 0.9rem;">
-                    {str(peak_hour['hour'])[:13]}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col2:
-            avg_bot_rate = (timeline_stats['bot_count'].sum() / timeline_stats['total_requests'].sum() * 100)
-            st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); 
-                        border-radius: 8px; padding: 16px; border: 1px solid #ce93d8;">
-                <div style="color: #6a1b9a; font-weight: 600; font-size: 0.9rem;">AVG BOT RATE</div>
-                <div style="color: #4a148c; font-size: 1.2rem; font-weight: 700; margin: 8px 0;">
-                    {avg_bot_rate:.1f}%
-                </div>
-                <div style="color: #8e24aa; font-size: 0.9rem;">
-                    Across all hours
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col3:
-            total_requests_time = timeline_stats['total_requests'].sum()
-            total_hours = len(timeline_stats)
-            avg_per_hour = total_requests_time / total_hours if total_hours > 0 else 0
-            st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); 
-                        border-radius: 8px; padding: 16px; border: 1px solid #a5d6a7;">
-                <div style="color: #1b5e20; font-weight: 600; font-size: 0.9rem;">AVG PER HOUR</div>
-                <div style="color: #0d3817; font-size: 1.2rem; font-weight: 700; margin: 8px 0;">
-                    {avg_per_hour:.0f} requests
-                </div>
-                <div style="color: #388e3c; font-size: 0.9rem;">
-                    {total_hours} hours tracked
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+                st.subheader("Score Distribution")
+                fig_ip = px.histogram(ip_data, x="ensemble_score", nbins=20,
+                                      color_discrete_sequence=["#3498db"])
+                fig_ip.add_vline(x=threshold, line_dash="dash", line_color="#d63031")
+                fig_ip.update_layout(**CHART_LAYOUT)
+                st.plotly_chart(fig_ip, use_container_width=True)
+
+                st.subheader("All Records for this IP")
+                show_cols = [c for c in ["ip", "ensemble_score", "xgb_score",
+                                          "iso_score", "victor_flag"] if c in ip_data.columns]
+                st.dataframe(ip_data[show_cols].round(4), use_container_width=True)
     else:
-        st.info("No timeline data available yet. Run the traffic simulation to generate data.")
+        st.info("Upar IP address daalo")
 
-# ─────────────────────────────────────────────────────────────────
-# PAGE: IP LOOKUP
-# ─────────────────────────────────────────────────────────────────
-
-elif page == "IP Lookup":
-    st.markdown("# Inspect an IP")
-    st.markdown("_Type in any IP address and I'll show you everything we know about it_")
-    st.divider()
-    
-    ip_input = st.text_input(
-        "Enter IP address to investigate",
-        placeholder="e.g., 192.168.1.1 or 127.0.0.1",
-        label_visibility="collapsed"
-    )
-    
-    if ip_input:
-        # Find matching IP
-        if "ip" in preds.columns:
-            ip_data = preds[preds["ip"] == ip_input]
-        else:
-            st.warning("IP column not found in predictions data")
-            ip_data = pd.DataFrame()
-        
-        if len(ip_data) == 0:
-            st.error(f"No records found for IP: **{ip_input}**")
-            st.info("Make sure the IP exists in your traffic data")
-        else:
-            avg_score = ip_data["ensemble_score"].mean()
-            max_score = ip_data["ensemble_score"].max()
-            req_count = len(ip_data)
-            is_bot = avg_score > threshold
-            
-            # Verdict card
-            verdict_gradient = "linear-gradient(135deg, #d63031 0%, #c92a1f 100%)" if is_bot else "linear-gradient(135deg, #00b894 0%, #008c5c 100%)"
-            verdict_label = "BOT DETECTED" if is_bot else "LEGITIMATE"
-            
-            st.markdown(f"""
-            <div style="background: {verdict_gradient}; color: white; border-radius: 16px; 
-                        padding: 32px; margin: 20px 0; box-shadow: 0 12px 32px rgba(0,0,0,0.15);">
-                <h2 style="margin: 0; color: white; font-size: 2.2rem;">{verdict_label}</h2>
-                <p style="margin: 12px 0 0; font-size: 1rem; opacity: 0.95;">
-                    IP: <code style="background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 4px;">{ip_input}</code>
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Stats
-            k1, k2, k3, k4 = st.columns(4)
-            k1.metric("Requests", f"{req_count:,}")
-            k2.metric("Avg Score", f"{avg_score:.3f}")
-            k3.metric("Max Score", f"{max_score:.3f}")
-            k4.metric("Status", "BOT" if is_bot else "HUMAN")
-            
-            st.divider()
-            
-            st.subheader("Full Activity")
-            display_cols = ["ip", "ensemble_score", "xgb_score", "iso_score", "victor_flag"] \
-                          if "ip" in ip_data.columns else ["ensemble_score", "xgb_score", "iso_score", "victor_flag"]
-            
-            display_data = ip_data[display_cols].copy() if all(c in ip_data.columns for c in display_cols) else ip_data
-            display_data = display_data.round(4)
-            
-            st.dataframe(display_data, use_container_width=True, height=300)
-            
-            # Score distribution chart
-            st.subheader("Score Distribution for This IP")
-            fig_ip = px.histogram(ip_data, x="ensemble_score", nbins=20,
-                                 title=f"Bot confidence scores for {ip_input}",
-                                 labels={"ensemble_score": "Bot Score", "count": "Occurrences"})
-            fig_ip.add_vline(x=threshold, line_dash="dash", line_color="#d63031",
-                            annotation_text=f"Threshold ({threshold})")
-            fig_ip.update_traces(marker_color="#3498db")
-            fig_ip.update_layout(**CHART_LAYOUT, height=350)
-            st.plotly_chart(fig_ip, use_container_width=True)
-    else:
-        st.info("Enter an IP address above to investigate its activity")
-
-# ─────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────
 # PAGE: MODEL EXPLAINABILITY
-# ─────────────────────────────────────────────────────────────────
-
+# ──────────────────────────────────────────────────────────────────
 elif page == "Model Explainability":
-    st.markdown("# How Victor Works")
-    st.markdown("_Here's what the model is actually looking at to make decisions_")
+    st.markdown("# Model Explainability")
+    st.markdown("_Victor kyun kisi ko bot maanta hai — yahan samjho_")
     st.divider()
-    
-    st.subheader("Feature Explanations")
-    st.markdown("Each of these signals helps Victor identify bot behavior:")
-    
-    explanations = {
-        "User Agent Suspicious": "Does the User-Agent match known bot signatures (curl, python-requests, etc.)?",
-        "Has Referer": "Did the request include a Referer header? Humans usually do.",
-        "Accept-Language": "Was an Accept-Language header sent? Bots often skip it.",
-        "Hit Secret Page": "Did the IP visit the hidden honeypot endpoint `/secret-data`? Only bots do.",
-        "User-Agent Length": "How long is the User-Agent string? Bots tend to use shorter ones.",
-        "Time Gap Between Requests": "How many seconds between requests? Bots move very fast (< 1 sec).",
-        "Unique Pages Visited": "How many different pages? Bots typically sweep many pages quickly.",
-        "Total Requests from IP": "How many total requests from this IP? Bots make many requests.",
-    }
-    
-    for feature, explanation in explanations.items():
-        st.markdown(f"**{feature}**  \n_{explanation}_  ")
-    
-    st.divider()
-    
-    # SHAP visualizations
-    st.subheader("SHAP Analysis")
-    st.markdown("_Feature importance as measured by SHAP values_")
-    
+
     shap_img_global = "data/shap/global_summary.png"
-    shap_img_bar = "data/shap/feature_bar.png"
-    
+    shap_img_bar    = "data/shap/feature_bar.png"
+    shap_csv        = load_shap_csv()
+
     if os.path.exists(shap_img_global) or os.path.exists(shap_img_bar):
-        col_shap1, col_shap2 = st.columns(2)
-        with col_shap1:
+        col1, col2 = st.columns(2)
+        with col1:
             if os.path.exists(shap_img_global):
-                st.markdown("**Global Feature Importance**")
+                st.subheader("Global Feature Importance")
                 st.image(shap_img_global, use_container_width=True)
-        
-        with col_shap2:
+        with col2:
             if os.path.exists(shap_img_bar):
-                st.markdown("**Average Feature Impact**")
+                st.subheader("Average Feature Impact")
                 st.image(shap_img_bar, use_container_width=True)
     else:
-        st.warning("SHAP plots not generated yet. Run `python explain.py` to generate them.")
-    
-    shap_csv = load_shap_csv()
+        st.warning("SHAP plots nahi mile. Pehle `python explain.py` chalao.")
+
     if shap_csv is not None:
         st.divider()
-        st.subheader("SHAP Value Heatmap")
-        st.markdown("_Top 200 requests showing SHAP values per feature_")
-        
+        st.subheader("SHAP Heatmap (top 200 rows)")
         shap_display = shap_csv.head(200)
-        fig_heat = px.imshow(
-            shap_display.values.T,
-            aspect="auto",
-            color_continuous_scale="RdBu_r",
-            labels=dict(x="Request Index", y="Feature", color="SHAP Value")
+        shap_renamed = shap_display.rename(
+            columns={c: c.replace("shap_", "") for c in shap_display.columns}
         )
-        fig_heat.update_layout(**CHART_LAYOUT, height=400)
+        fig_heat = px.imshow(
+            shap_renamed.values.T,
+            x=list(range(len(shap_renamed))),
+            y=list(shap_renamed.columns),
+            color_continuous_scale="RdBu_r",
+            aspect="auto",
+            labels=dict(x="Request Index", y="Feature", color="SHAP")
+        )
+        fig_heat.update_layout(**CHART_LAYOUT, height=380)
         st.plotly_chart(fig_heat, use_container_width=True)
 
-# ─────────────────────────────────────────────────────────────────
-# PAGE: RAW DATA
-# ─────────────────────────────────────────────────────────────────
-
-elif page == "Raw Data":
-    st.markdown("# The Full Log")
-    st.markdown("_Every request Victor has analyzed, with scores and verdicts_")
     st.divider()
-    
-    col_filter1, col_filter2, col_filter3 = st.columns([2, 1, 1])
-    
-    with col_filter1:
-        filter_type = st.selectbox(
-            "Filter by type:",
-            ["All Traffic", "Bots Only", "Humans Only"],
-            label_visibility="collapsed"
-        )
-    
-    with col_filter2:
-        min_score = st.slider("Min score:", 0.0, 1.0, 0.0, label_visibility="collapsed")
-    
-    with col_filter3:
-        max_rows = st.number_input("Show rows:", 10, 10000, 100, label_visibility="collapsed")
-    
-    # Apply filters
+    st.subheader("Har Feature ka Matlab")
+    explanations = {
+        "ua_is_suspicious":        "User agent mein bot keywords hain (python-requests, curl, etc.)",
+        "has_referer":             "Request ke saath Referer header aaya? Humans generally bhejte hain.",
+        "has_accept_lang":         "Accept-Language header tha? Bots aksar nahi bhejte.",
+        "hit_secret_page":         "IP ne hidden honeypot endpoint /secret-data visit kiya?",
+        "ua_length":               "User agent string ki length — bots ka chhota hota hai.",
+        "time_gap_seconds":        "Requests ke beech ka time — bots bahut fast hote hain.",
+        "unique_pages_visited":    "Kitne alag pages visit kiye — bots jyada pages sweep karte hain.",
+        "total_requests_from_ip":  "Is IP se total kitni requests aayi.",
+    }
+    for feat, desc in explanations.items():
+        st.markdown(f"**`{feat}`** — {desc}")
+
+# ──────────────────────────────────────────────────────────────────
+# PAGE: RAW DATA
+# ──────────────────────────────────────────────────────────────────
+elif page == "Raw Data":
+    st.markdown("# Raw Predictions Log")
+    st.markdown("_Saari requests unke scores aur verdict ke saath_")
+    st.divider()
+
+    col_f1, col_f2, col_f3 = st.columns([2, 1, 1])
+    with col_f1:
+        filter_opt = st.radio("Show:", ["All", "Bots only", "Humans only"], horizontal=True)
+    with col_f2:
+        min_score = st.slider("Min score", 0.0, 1.0, 0.0, 0.01)
+    with col_f3:
+        max_rows = st.number_input("Max rows:", 10, 10000, 200)
+
     display_df = preds.copy()
-    
-    if filter_type == "Bots Only":
-        display_df = display_df[display_df["ensemble_score"] > threshold]
-    elif filter_type == "Humans Only":
-        display_df = display_df[display_df["ensemble_score"] <= threshold]
-    
+    display_df["victor_flag"] = (display_df["ensemble_score"] > threshold).astype(int)
+
+    if filter_opt == "Bots only":
+        display_df = display_df[display_df["victor_flag"] == 1]
+    elif filter_opt == "Humans only":
+        display_df = display_df[display_df["victor_flag"] == 0]
+
     display_df = display_df[display_df["ensemble_score"] >= min_score]
-    display_df = display_df.head(max_rows)
-    
-    st.markdown(f"**Showing {len(display_df):,} records**")
-    st.dataframe(display_df.round(4), use_container_width=True, height=500)
-    
-    # Download option
+    display_df = display_df.sort_values("ensemble_score", ascending=False).head(max_rows)
+
+    cols_to_show = [c for c in ["ip", *FEATURE_COLS, "iso_score", "xgb_score",
+                                 "ensemble_score", "victor_flag"] if c in display_df.columns]
+    st.markdown(f"**{len(display_df):,} records shown**")
+    st.dataframe(display_df[cols_to_show].round(4).reset_index(drop=True),
+                 use_container_width=True, height=500)
+
     csv = display_df.to_csv(index=False)
-    st.download_button(
-        "Download as CSV",
-        csv,
-        "victor_predictions.csv",
-        "text/csv"
-    )
+    st.download_button("⬇ Download CSV", csv, "victor_predictions.csv", "text/csv")
 
-# ─────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────
 # PAGE: SETTINGS
-# ─────────────────────────────────────────────────────────────────
-
+# ──────────────────────────────────────────────────────────────────
 elif page == "Settings":
     st.markdown("# Settings & Info")
-    st.markdown("_Configuration and stats about your detection system_")
     st.divider()
-    
-    st.markdown("### Dataset Information")
+
+    st.markdown("### Dataset Info")
     st.json({
         "total_records": int(len(preds)),
-        "bots_flagged": int(bots_count),
+        "bots_flagged":  int(bots_count),
         "clean_traffic": int(human_count),
         "bot_percentage": f"{bot_pct:.2f}%",
-        "features_used": len(FEATURE_COLS)
+        "features_used":  len(FEATURE_COLS),
+        "ip_column_present": "ip" in preds.columns,
     })
-    
+
     st.divider()
-    
     st.markdown("### Current Threshold")
-    st.info(f"Bot Score Threshold: **{threshold}**  \n"
-            f"Requests scoring above this value are flagged as bots.")
-    
+    st.info(f"Threshold: **{threshold}** — isse zyada score = bot")
+
     st.divider()
-    
-    st.markdown("### Model Configuration")
+    st.markdown("### Model Metrics")
     if metrics:
         st.json(metrics)
     else:
-        st.warning("Metrics file not found")
-    
+        st.warning("metrics file nahi mili — pehle train_model.py chalao")
+
     st.divider()
-    
-    st.markdown("### File Locations")
-    st.code(
-        """data/
+    st.markdown("### File Structure")
+    st.code("""data/
 ├── features.csv
 ├── predictions.csv
 ├── model_metrics.json
-├── traffic_logs.json
+├── victor_traffic.db
 └── shap/
-    └── shap_values.csv
-
+    ├── shap_values.csv
+    ├── global_summary.png
+    └── feature_bar.png
 models/
 ├── isolation_forest.pkl
-└── xgboost_model.pkl
-""",
-        language="bash"
-    )
+└── xgboost_model.pkl""", language="bash")
