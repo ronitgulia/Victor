@@ -10,3 +10,4 @@ shap>=0.44
 matplotlib>=3.7
 streamlit>=1.35
 plotly>=5.18
+pyyaml>=6.0

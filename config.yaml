@@ -1,0 +1,209 @@
+# ─────────────────────────────────────────────────────────────────
+# VICTOR BOT DETECTION — CONFIGURATION
+# ─────────────────────────────────────────────────────────────────
+# All hardcoded values centralized here for easy customization
+
+# ─────────────────────────────────────────────────────────────────
+# FILE PATHS
+# ─────────────────────────────────────────────────────────────────
+paths:
+  data_dir: "data"
+  models_dir: "models"
+  
+  # Input/Output files
+  traffic_logs: "data/traffic_logs.json"
+  features: "data/features.csv"
+  predictions: "data/predictions.csv"
+  model_metrics: "data/model_metrics.json"
+  
+  # SHAP explainability
+  shap_dir: "data/shap"
+  shap_values: "data/shap/shap_values.csv"
+  shap_global_summary: "data/shap/global_summary.png"
+  shap_feature_bar: "data/shap/feature_bar.png"
+  
+  # Trained models
+  isolation_forest_model: "models/isolation_forest.pkl"
+  xgboost_model: "models/xgboost_model.pkl"
+
+# ─────────────────────────────────────────────────────────────────
+# FEATURE ENGINEERING
+# ─────────────────────────────────────────────────────────────────
+features:
+  # Column names for bot detection features
+  columns:
+    - ua_is_suspicious
+    - has_referer
+    - has_accept_lang
+    - hit_secret_page
+    - ua_length
+    - time_gap_seconds
+    - unique_pages_visited
+    - total_requests_from_ip
+  
+  # Bot detection keywords in User-Agent
+  bot_keywords:
+    - python
+    - scrapy
+    - curl
+    - go-http
+    - wget
+    - bot
+    - crawl
+    - spider
+  
+  # Special endpoints that only bots visit
+  secret_endpoints:
+    - /secret-data
+  
+  # Default label column name
+  label_column: label
+
+# ─────────────────────────────────────────────────────────────────
+# MODEL TRAINING CONFIGURATION
+# ─────────────────────────────────────────────────────────────────
+models:
+  # Isolation Forest parameters
+  isolation_forest:
+    n_estimators: 200
+    contamination: auto  # auto or 0.05–0.45
+    random_state: 42
+  
+  # XGBoost parameters
+  xgboost:
+    n_estimators: 300
+    max_depth: 4
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    eval_metric: logloss
+    early_stopping_rounds: 20
+    random_state: 42
+  
+  # Train/test split
+  test_size: 0.25
+  random_state: 42
+
+# ─────────────────────────────────────────────────────────────────
+# BOT DETECTION SETTINGS
+# ─────────────────────────────────────────────────────────────────
+detection:
+  # Ensemble score threshold (0.0–1.0)
+  # Scores above this flag IPs as bots
+  default_threshold: 0.5
+  
+  # Threshold slider range in dashboard
+  threshold_min: 0.0
+  threshold_max: 1.0
+  threshold_step: 0.05
+  
+  # Ensemble scoring method: "average" or "weighted"
+  ensemble_method: average
+
+# ─────────────────────────────────────────────────────────────────
+# TRAFFIC SIMULATION
+# ─────────────────────────────────────────────────────────────────
+simulation:
+  # Honeypot server
+  base_url: "http://127.0.0.1:5000"
+  flask_port: 5000
+  
+  # Human traffic simulation
+  human:
+    num_sessions: 40
+    pages: ["/", "/articles", "/about"]
+    request_delay_min: 0.3
+    request_delay_max: 0.8
+    session_delay_min: 0.2
+    session_delay_max: 0.5
+  
+  # Bot traffic simulation
+  bot:
+    num_sessions: 40
+    pages: ["/", "/articles", "/about", "/secret-data", "/secret-data", "/secret-data"]
+    request_delay_min: 0.01
+    request_delay_max: 0.05
+    session_delay_min: 0.05
+    session_delay_max: 0.15
+    user_agents:
+      - "python-requests/2.28.0"
+      - "Scrapy/2.11.0 (+https://scrapy.org)"
+      - "curl/7.88.1"
+      - "Mozilla/5.0 (compatible; Googlebot/2.1)"
+      - "Go-http-client/1.1"
+
+# ─────────────────────────────────────────────────────────────────
+# DASHBOARD CONFIGURATION
+# ─────────────────────────────────────────────────────────────────
+dashboard:
+  page_title: "Victor — Bot Detection"
+  page_icon: "⚔"
+  layout: wide
+  sidebar_state: expanded
+  
+  # Data refresh cache TTL (seconds)
+  cache_ttl: 5
+  cache_ttl_metrics: 10
+  
+  # Real-time activity feed
+  activity_feed_size: 10  # show last 10 requests
+  
+  # Quick insights high-confidence threshold
+  high_confidence_threshold: 0.9
+  
+  # Default filters
+  default_filter: "All"
+  default_min_score: 0.0
+  default_max_rows: 100
+  
+  # Chart height
+  chart_height_default: 400
+  chart_height_heatmap: 380
+  
+  # Progress update interval (human simulation)
+  progress_update_interval: 10
+
+# ─────────────────────────────────────────────────────────────────
+# SHAP EXPLAINABILITY
+# ─────────────────────────────────────────────────────────────────
+shap:
+  # SHAP plot parameters
+  figure_size: [10, 6]
+  dpi: 150
+  
+  # Heatmap display
+  heatmap_rows: 200
+
+# ─────────────────────────────────────────────────────────────────
+# UI COLORS & STYLING
+# ─────────────────────────────────────────────────────────────────
+colors:
+  bot_color: "#d63031"
+  human_color: "#00b894"
+  threshold_color: "#0984e3"
+  accent_color: "#ff6b6b"
+  
+  # Background gradients
+  primary_gradient: "135deg, #f5f7fa 0%, #c3cfe2 100%"
+  sidebar_gradient: "180deg, #2d3436 0%, #636e72 100%"
+
+# ─────────────────────────────────────────────────────────────────
+# LOGGING & DEBUGGING
+# ─────────────────────────────────────────────────────────────────
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# ─────────────────────────────────────────────────────────────────
+# PERFORMANCE THRESHOLDS
+# ─────────────────────────────────────────────────────────────────
+performance:
+  # Model performance targets (for validation)
+  min_xgb_auc: 0.96
+  min_iso_auc: 0.91
+  min_ensemble_auc: 0.97
+  
+  # Dataset requirements
+  min_records: 100
+  min_bot_samples: 20
+  min_human_samples: 20
