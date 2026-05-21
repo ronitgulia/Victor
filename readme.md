@@ -1,68 +1,91 @@
-# Victor — Bot Detection System
+# Victor — Real-Time Bot Detection System
 
-A sophisticated real-time bot detection system using ensemble machine learning. Victor analyzes web traffic behavior patterns to identify and flag bot activity with high accuracy.
+> Ensemble ML-powered bot detection that **scores and blocks bots on every incoming request** — no batch processing, no manual pipeline runs between detections.
+
+---
 
 ## Overview
 
-Victor combines **XGBoost** and **Isolation Forest** ensemble models to detect malicious bot traffic in real-time. The system learns behavioral patterns from honeypot data and user-agent signatures to distinguish between legitimate users and automated bots.
+Victor combines **XGBoost** and **Isolation Forest** in a weighted ensemble to detect malicious bot traffic. A trained model is loaded directly inside the honeypot server, scoring each HTTP request in real-time. Bots above the confidence threshold receive an instant `403 Blocked` response.
 
 **Key Capabilities:**
-- Real-time bot detection with confidence scoring
-- Honeypot-based feature extraction
-- Ensemble ML approach for high accuracy
-- Interactive dashboard for monitoring and analysis
-- SHAP-based model explainability
-- Live traffic simulation and testing
+- 🔴 **Real-time detection & blocking** — every request scored before the route handler runs
+- 🛡 **12-feature behavioral fingerprinting** — UA, headers, timing, IP reputation, encoding
+- 🌐 **Datacenter IP detection** — 72 CIDR ranges across 10 cloud providers (AWS, GCP, Azure, DO, Hetzner…)
+- 🤖 **Ensemble ML** — XGBoost (supervised) + Isolation Forest (anomaly) weighted ensemble
+- 📊 **Interactive dashboard** — 5-page Streamlit UI with live stats, IP lookup & geolocation
+- 🔍 **SHAP explainability** — per-feature importance for every prediction
+- ⚙️ **Fully config-driven** — all thresholds, weights, and paths in `config.yaml`
+- 🗂 **Model versioning** — every retrain saves a timestamped backup in `models/versions/`
+- 🚀 **One-click pipeline** — `python run_pipeline.py` runs all steps in order
 
 ---
 
-## Features
+## Architecture
 
-### Core Detection Features
-
-Victor analyzes **8 behavioral signals** to identify bots:
-
-| Feature | Description |
-|---------|-------------|
-| **User Agent Suspicious** | Matches known bot signatures (curl, python-requests, etc.) |
-| **Has Referer** | Whether request included Referer header (humans usually do) |
-| **Accept-Language** | Whether Accept-Language header was sent (bots often skip it) |
-| **Hit Secret Page** | Whether IP visited hidden honeypot endpoint `/secret-data` |
-| **User-Agent Length** | Bot UAs are typically shorter than human browsers |
-| **Time Gap Between Requests** | Bots make rapid consecutive requests (< 1 sec gap) |
-| **Unique Pages Visited** | Bots systematically sweep many pages quickly |
-| **Total Requests from IP** | Bots generate unusually high request volume |
-
-### Machine Learning Models
-
-- **XGBoost Classifier**: Primary model for high-dimensional feature patterns
-- **Isolation Forest**: Anomaly detection for outlier bot behavior
-- **Ensemble Voting**: Combined predictions for robust classification
+```
+                          ┌─────────────────────────────────┐
+  Incoming HTTP Request   │       honeypot.py               │
+  ──────────────────────▶ │  DatacenterChecker              │
+                          │  RealTimeScorer                 │
+                          │    ├─ per-IP session history    │
+                          │    ├─ compute 12 features       │
+                          │    └─ XGBoost.predict_proba()   │
+                          │                                 │
+                          │  score ≥ threshold?             │
+                          │  ├── YES → 403 Blocked          │
+                          │  └── NO  → serve normally       │
+                          │                                 │
+                          │  log to SQLite (bot_score,      │
+                          │  is_blocked, header_count…)     │
+                          └─────────────────────────────────┘
+                                        │
+                              (offline pipeline)
+                                        ▼
+                          feature_engineering.py  →  features.csv (12 cols)
+                                        ▼
+                              train_model.py
+                          ┌─────────────────────┐
+                          │  XGBoost (60% weight)│
+                          │  IsoForest (40% weight│
+                          └─────────────────────┘
+                                        ▼
+                          models/xgboost_model.pkl
+                          models/feature_cols.json  ← scorer reads this
+                          models/isolation_forest.pkl
+                                        ▼
+                          explain.py  →  SHAP plots + shap_values.csv
+                                        ▼
+                          streamlit run dashboard.py
+```
 
 ---
 
-## Installation
+## Detection Features (12 total)
 
-### Requirements
-- Python 3.8+
-- pip or conda
+### Original 8 — Behavioral Signals
 
-### Setup
+| Feature | What it measures | Bot signal |
+|---|---|---|
+| `ua_is_suspicious` | UA matches bot keywords (curl, scrapy, python-requests…) | High |
+| `has_referer` | Referer header present | Absent in bots |
+| `has_accept_lang` | Accept-Language header present | Absent in bots |
+| `hit_secret_page` | Visited hidden honeypot endpoint `/secret-data` | Strong bot indicator |
+| `ua_length` | Length of User-Agent string | Bots: short (10–30 chars) |
+| `time_gap_seconds` | Seconds between consecutive requests from same IP | Bots: < 0.1s |
+| `unique_pages_visited` | Distinct paths visited per IP | Bots sweep many pages |
+| `total_requests_from_ip` | Total request volume per IP | Bots: very high |
 
-1. **Clone/Navigate to project:**
-   ```bash
-   cd victor
-   ```
+### New 4 — Step 6 Additions
 
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+| Feature | How computed | Bot signal |
+|---|---|---|
+| `is_datacenter_ip` | 72 CIDR ranges: AWS, GCP, Azure, DO, Hetzner, Linode, Vultr, Cloudflare, OVH, Scaleway | ~80% of bots originate from datacenters |
+| `header_count` | `len(request.headers)` at request time | Browsers send 8–12; bots send 2–4 |
+| `missing_common_headers` | Count of absent: Accept + Referer + Accept-Language (0–3) | Higher = more bot-like |
+| `accept_encoding_score` | 0 = none, 1 = gzip only, 2 = gzip + Brotli | Real browsers always support Brotli |
 
-3. **Verify installation:**
-   ```bash
-   python -c "import streamlit, xgboost, shap; print('✓ All dependencies installed')"
-   ```
+> **Note on JA3/TLS fingerprint**: JA3 requires access to the raw TLS ClientHello which Flask/WSGI never receives. A real JA3 implementation needs nginx + `nginx_ssl_ja3` as a reverse proxy. The 4 header-based features above provide comparable discriminative power at zero infrastructure cost.
 
 ---
 
@@ -70,387 +93,290 @@ Victor analyzes **8 behavioral signals** to identify bots:
 
 ```
 victor/
-├── dashboard.py              # Interactive Streamlit dashboard
-├── train_model.py            # Model training pipeline
-├── feature_engineering.py    # Feature extraction & transformation
-├── honeypot.py               # Honeypot server (captures bot behavior)
-├── simulate_traffic.py       # Simulates real & bot traffic
-├── explain.py                # SHAP-based model explainability
+├── honeypot.py               # Flask honeypot + DatacenterChecker + RealTimeScorer
+├── simulate_traffic.py       # Simulates human and bot sessions
+├── feature_engineering.py    # 12-feature extraction from SQLite → features.csv
+├── train_model.py            # XGBoost + Isolation Forest training + versioning
+├── explain.py                # SHAP explainability plots
+├── dashboard.py              # 5-page Streamlit dashboard
+├── database.py               # SQLite ORM + schema migration
+├── config_loader.py          # Singleton config reader (dot-notation)
+├── config.yaml               # All configuration (thresholds, paths, weights…)
+├── run_pipeline.py           # One-click pipeline runner
 ├── requirements.txt          # Python dependencies
-├── readme.md                 # This file
 │
 ├── data/
-│   ├── features.csv          # Extracted features for all requests
-│   ├── predictions.csv       # Model predictions & scores
-│   ├── traffic_logs.json     # Raw HTTP traffic logs
-│   ├── model_metrics.json    # XGBoost & Isolation Forest AUC/metrics
+│   ├── victor_traffic.db         # SQLite: all request logs (incl. bot_score, is_blocked)
+│   ├── datacenter_ranges.json    # 72 cloud provider CIDR ranges
+│   ├── features.csv              # Engineered features (12 columns)
+│   ├── predictions.csv           # Ensemble scores + victor_flag per request
+│   ├── model_metrics.json        # AUC, Precision, Recall, F1
+│   ├── realtime_stats.json       # Live scorer stats (written by honeypot every 50 req)
 │   └── shap/
-│       ├── global_summary.png    # SHAP importance plot
-│       ├── feature_bar.png       # Feature impact bar chart
-│       └── shap_values.csv       # Raw SHAP values (per request)
+│       ├── global_summary.png    # SHAP beeswarm importance plot
+│       ├── feature_bar.png       # Mean |SHAP| bar chart
+│       └── shap_values.csv       # Per-request SHAP values (12 features)
 │
 └── models/
-    ├── xgboost_model.pkl         # Trained XGBoost classifier
-    └── isolation_forest.pkl      # Trained Isolation Forest model
+    ├── xgboost_model.pkl         # Active XGBoost classifier
+    ├── isolation_forest.pkl      # Active Isolation Forest
+    ├── feature_cols.json         # Exact feature list used for training (read by scorer)
+    └── versions/
+        ├── xgboost_model_<ts>.pkl       # Timestamped backup on each retrain
+        └── isolation_forest_<ts>.pkl
 ```
 
 ---
 
 ## Quick Start
 
-### Step 1: Generate Training Data
+### 1. Install dependencies
 
-Start the honeypot server (captures bot attempts):
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Start the honeypot server
+
 ```bash
 python honeypot.py
 ```
-*Runs on `http://localhost:5000` by default*
 
-### Step 2: Simulate Traffic
+Runs on `http://127.0.0.1:5000`. On startup it prints model status and whether blocking is active.
 
-In a **new terminal**, simulate both legitimate and bot traffic:
+### 3. Simulate traffic (separate terminal)
+
 ```bash
 python simulate_traffic.py
 ```
 
-This generates:
-- `data/traffic_logs.json` — Raw HTTP requests
-- `data/features.csv` — Extracted behavioral features
+Sends 40 human sessions and 40 bot sessions to the honeypot.
 
-### Step 3: Train Models
+### 4. Run the full ML pipeline
 
-Extract features and train the ensemble:
 ```bash
-python feature_engineering.py
-python train_model.py
+python run_pipeline.py
 ```
 
-Outputs:
-- `models/xgboost_model.pkl` — Trained XGBoost
-- `models/isolation_forest.pkl` — Trained Isolation Forest
-- `data/predictions.csv` — Predictions on entire dataset
-- `data/model_metrics.json` — AUC scores and metrics
+Runs in order with timing:
+1. `feature_engineering.py` → `data/features.csv` (12 features)
+2. `train_model.py` → models + `feature_cols.json` + metrics
+3. `explain.py` → SHAP plots
 
-### Step 4: Generate Explainability
-
-Create SHAP visualizations for model interpretability:
+Or run with `--skip-shap` for a faster iteration:
 ```bash
-python explain.py
+python run_pipeline.py --skip-shap
 ```
 
-Outputs:
-- `data/shap/global_summary.png` — Force plot
-- `data/shap/feature_bar.png` — Mean |SHAP| values
-- `data/shap/shap_values.csv` — Per-request SHAP values
+### 5. Launch the dashboard
 
-### Step 5: Launch Dashboard
-
-Start the interactive monitoring dashboard:
 ```bash
 streamlit run dashboard.py
 ```
 
-Open browser to `http://localhost:8501`
+Open `http://localhost:8501`
+
+> After the first retrain, restart `honeypot.py` to pick up the new model. The scorer reloads `xgboost_model.pkl` and `feature_cols.json` at startup.
 
 ---
 
-## Dashboard Guide
+## Real-Time Detection
 
-### Pages Overview
-
-#### 1. **Dashboard** (Main Page)
-Real-time overview of bot detection activity:
-- **Metrics**: Total requests, bots detected, clean traffic, average confidence
-- **Traffic Breakdown**: Pie chart showing bot vs human split
-- **Confidence Distribution**: Histogram of bot scores with threshold line
-- **Feature Comparison**: Bots vs humans behavioral differences
-- **Detection Timeline**: Bot activity over time
-- **Recent Activity**: Live feed of latest requests
-- **Quick Insights**: Top active IP, detection rate, high-confidence detections
-
-#### 2. **IP Lookup**
-Investigate individual IP addresses:
-- Full activity history for any IP
-- Verdict (BOT/HUMAN) with confidence score
-- Score distribution chart
-- All associated requests with scores
-
-#### 3. **Model Explainability**
-Understand model decisions:
-- Feature explanation guide
-- SHAP global importance plots
-- SHAP value heatmap (top 200 requests)
-- What each feature means for predictions
-
-#### 4. **Raw Data**
-Complete detection log with filtering:
-- Filter by traffic type (All/Bots/Humans)
-- Min confidence threshold slider
-- Paginated results
-- Download as CSV
-
-#### 5. **Settings**
-System configuration & statistics:
-- Dataset information (total records, bot %)
-- Current threshold setting
-- Model performance metrics
-- File locations reference
-
----
-
-## How It Works
-
-### Architecture
+When `honeypot.py` starts it loads the trained model and starts scoring every request before serving it:
 
 ```
-Raw Traffic Logs
-      ↓
-[Feature Engineering] → Behavioral signals extracted
-      ↓
-┌─────────────────────────────────────────┐
-│  Ensemble Classification                │
-├──────────────────┬──────────────────────┤
-│  XGBoost         │  Isolation Forest    │
-│  (Supervised)    │  (Anomaly Detection) │
-└──────────────────┴──────────────────────┘
-      ↓
-[Ensemble Voting] → Combined verdict
-      ↓
-Confidence Score (0-1) + Classification
-      ↓
-Dashboard Visualization & Real-time Monitoring
+GET /articles HTTP/1.1
+User-Agent: python-requests/2.28.0
+                    ↓
+        RealTimeScorer.score()
+          features computed in ~0.5ms
+          XGBoost.predict_proba() → 0.94
+          0.94 ≥ threshold (0.5) → BOT
+                    ↓
+        HTTP/1.1 403 Forbidden
+        {"status":"blocked","code":403}
 ```
 
-### Model Training Flow
+The blocked request is still logged to SQLite with `is_blocked=1` and `bot_score=0.94` for analysis.
 
-1. **Feature Extraction**: 8 behavioral features per request
-2. **Train-Test Split**: 80-20 split for validation
-3. **XGBoost Training**: Gradient boosting on labeled features
-4. **Isolation Forest Training**: Anomaly detection on feature patterns
-5. **Ensemble Voting**: Average confidence from both models
-6. **Evaluation**: AUC, Precision, Recall, F1-Score metrics
+### Endpoints
 
-### Prediction Pipeline
+| Endpoint | Description |
+|---|---|
+| `GET /` | Homepage |
+| `GET /articles` | Articles page |
+| `GET /about` | About page |
+| `GET /secret-data` | Honeypot trap — bots find this via aggressive scanning |
+| `GET /api/status` | Server status, total requests, unique IPs, blocked count |
+| `GET /api/realtime-stats` | Live scorer stats (scored, blocked, threshold, mode) |
 
-```
-Incoming Request
-      ↓
-[Extract 8 Features]
-      ↓
-XGBoost Score: 0-1 (probability of bot)
-Isolation Forest Score: 0-1 (anomaly score)
-      ↓
-Ensemble Average: (XGB + ISO) / 2
-      ↓
-Compare with Threshold (default 0.5)
-      ↓
-Decision: BOT or HUMAN
+### Blocking mode
+
+Controlled by `config.yaml`:
+
+```yaml
+detection:
+  realtime_blocking: true   # false = log scores but don't block (safe mode)
+  default_threshold: 0.5    # raise to reduce false positives
 ```
 
 ---
 
-## Configuration
+## Dashboard
 
-### Threshold Adjustment
+### Pages
 
-In the dashboard sidebar, adjust the **"When to flag as bot?"** slider:
-- **Lower threshold (0.3)**: More sensitive, catches more bots but more false positives
-- **Higher threshold (0.7)**: More conservative, fewer false positives but may miss subtle bots
+| Page | What you get |
+|---|---|
+| **Dashboard** | Traffic breakdown pie, score distribution histogram, bot vs human feature comparison, detection timeline, recent activity feed |
+| **IP Lookup** | Full record for any IP — verdict card, geolocation (city/ISP via ip-api.com), score chart, all requests |
+| **Model Explainability** | SHAP global importance, feature impact bar, SHAP heatmap (top 200 rows), per-feature explanations |
+| **Raw Data** | Filterable/sortable full predictions log with CSV download |
+| **Settings** | Dataset stats, current threshold, model metrics JSON, file structure |
 
-### Customizing Features
+### Sidebar features
 
-Edit `feature_engineering.py` to modify feature extraction:
-```python
-FEATURE_COLS = [
-    "ua_is_suspicious",      # Customize detection
-    "has_referer",
-    "has_accept_lang",
-    "hit_secret_page",
-    "ua_length",
-    "time_gap_seconds",
-    "unique_pages_visited",
-    "total_requests_from_ip"
-]
-```
-
-### Model Parameters
-
-Modify in `train_model.py`:
-
-**XGBoost:**
-```python
-xgb = XGBClassifier(
-    max_depth=6,
-    learning_rate=0.1,
-    n_estimators=100
-)
-```
-
-**Isolation Forest:**
-```python
-iso = IsolationForest(
-    contamination=0.1,  # Expected bot percentage
-    random_state=42
-)
-```
+- **Live Stats** — bots and humans count with percentages
+- **🛡 Real-Time Shield** — reads `data/realtime_stats.json`: scored count, blocked count, model status
+- **⚠️ Bot Spike Alert** — red alert when bot % exceeds `detection.bot_spike_threshold` (default 60%)
+- **🔴 Auto-Refresh / Live Mode** — toggle to auto-refresh dashboard every N seconds
+- **Threshold slider** — adjust detection sensitivity without retraining
 
 ---
 
-## Performance Metrics
+## Configuration (`config.yaml`)
 
-The system tracks:
-- **AUC-ROC Score**: Area under the receiver operating characteristic curve
-- **Precision**: True positives / (true positives + false positives)
-- **Recall**: True positives / (true positives + false negatives)
-- **F1-Score**: Harmonic mean of precision and recall
-- **Detection Rate**: % of requests flagged as bots
+All hardcoded values are centralized in `config.yaml`. Key sections:
 
-View in dashboard → **Settings** → **Model Configuration**
+```yaml
+detection:
+  default_threshold: 0.5         # Bot/human decision boundary
+  realtime_blocking: true        # Block bots in honeypot (false = log only)
+  bot_spike_threshold: 60.0      # Sidebar alert threshold (%)
+  ensemble_weights:
+    isolation_forest: 0.4
+    xgboost: 0.6
+
+features:
+  columns:                       # Feature list (drives training + scoring)
+    - ua_is_suspicious
+    - has_referer
+    - has_accept_lang
+    - hit_secret_page
+    - ua_length
+    - time_gap_seconds
+    - unique_pages_visited
+    - total_requests_from_ip
+    - is_datacenter_ip           # New
+    - header_count               # New
+    - missing_common_headers     # New
+    - accept_encoding_score      # New
+
+dashboard:
+  cache_ttl: 5                   # Data refresh TTL (seconds)
+  live_mode_refresh_interval: 5  # Auto-refresh interval
+```
+
+Access values in code via `Config.get("detection.default_threshold")`.
 
 ---
 
-## File Descriptions
+## Adding New Features
 
-### Data Files
-- **features.csv**: 8 features × N requests (input to models)
-- **predictions.csv**: Predictions with XGB score, ISO score, ensemble score, verdict
-- **traffic_logs.json**: Raw HTTP request/response data
-- **model_metrics.json**: AUC, Precision, Recall, F1 for both models
+1. **Capture data** in `honeypot.py` `before_request` (already captures all headers)
+2. **Add DB column** to `database.py` `_migrate_schema()` — old rows get defaults, no data loss
+3. **Compute feature** in `feature_engineering.py` and `RealTimeScorer._features()` in `honeypot.py`
+4. **Add to `config.yaml`** `features.columns` list
+5. **Retrain**: `python run_pipeline.py`
+6. **Restart honeypot** — it auto-loads the new model + `feature_cols.json`
 
-### Model Files
-- **xgboost_model.pkl**: Serialized XGBoost classifier
-- **isolation_forest.pkl**: Serialized Isolation Forest model
+The scorer always uses `models/feature_cols.json` (written at training time) so model and features are always in sync.
 
-### SHAP Files
-- **global_summary.png**: Force plot showing average feature contributions
-- **feature_bar.png**: Bar chart of mean |SHAP| values
-- **shap_values.csv**: Per-request SHAP values for each feature
+---
+
+## Performance
+
+Typical results on the simulated dataset (680 requests, 70% bots):
+
+| Metric | Value |
+|---|---|
+| XGBoost AUC | 1.000 |
+| Isolation Forest AUC | 0.147 (unsupervised — expected on synthetic data) |
+| Ensemble score | Weighted 60/40 |
+| Real-time scoring latency | < 1ms per request |
+| Datacenter CIDR lookup | < 0.1ms (in-memory ipaddress module) |
+
+> AUC of 1.0 on simulated data is expected — the simulator uses hardcoded bot UA strings that perfectly match training labels. On real-world traffic, expect 0.92–0.97.
 
 ---
 
 ## Troubleshooting
 
-### Issue: "Data files not found!"
-**Solution**: Run the pipeline in order:
+### "Data files not found!"
+
+Run the full pipeline first:
 ```bash
-python honeypot.py              # (in separate terminal)
-python simulate_traffic.py
-python feature_engineering.py
-python train_model.py
+python honeypot.py          # terminal 1
+python simulate_traffic.py  # terminal 2
+python run_pipeline.py      # terminal 2 (after simulate finishes)
 streamlit run dashboard.py
 ```
 
-### Issue: Honeypot port already in use
-**Solution**: Edit `honeypot.py` and change port:
-```python
-app.run(host='localhost', port=5001)  # Change from 5000
-```
+### SHAP fails with XGBoostError shape mismatch
 
-### Issue: Dashboard loads but shows no data
-**Solution**: Ensure all CSV files exist in `data/`:
-- `data/features.csv`
-- `data/predictions.csv`
-- `data/model_metrics.json`
-
-Run `python train_model.py` to regenerate.
-
-### Issue: SHAP plots not showing
-**Solution**: Run the explainability script:
+`explain.py` must use the same features the model was trained on. The fix:
 ```bash
-python explain.py
+python train_model.py   # regenerates models/feature_cols.json
+python explain.py       # reads feature_cols.json automatically
 ```
+
+### Honeypot port already in use
+
+Change port in `config.yaml`:
+```yaml
+simulation:
+  flask_port: 5001
+```
+And update `honeypot.py` `app.run(port=...)` to match.
+
+### Bot score always -1.0
+
+No model is loaded. Run the pipeline first:
+```bash
+python run_pipeline.py
+```
+Then restart `honeypot.py`.
+
+### Disable blocking temporarily
+
+Set in `config.yaml`:
+```yaml
+detection:
+  realtime_blocking: false
+```
+Restart `honeypot.py`. Requests are still scored and logged — just not blocked.
 
 ---
 
 ## Dependencies
 
 | Package | Version | Purpose |
-|---------|---------|---------|
-| streamlit | 1.35+ | Dashboard framework |
-| xgboost | 2.0+ | Gradient boosting classifier |
-| scikit-learn | 1.3+ | Isolation Forest, metrics |
-| pandas | 2.0+ | Data manipulation |
-| plotly | 5.18+ | Interactive charts |
-| shap | 0.44+ | Model explainability |
-| flask | 2.3+ | Honeypot web server |
-| faker | 19.0+ | Generate fake user agents |
-
----
-
-## Performance Benchmarks
-
-Typical results on simulated traffic:
-
-| Metric | Value |
-|--------|-------|
-| XGBoost AUC | 0.96 - 0.98 |
-| Isolation Forest AUC | 0.91 - 0.94 |
-| Ensemble AUC | 0.97 - 0.99 |
-| Precision (Bots) | 0.94 - 0.96 |
-| Recall (Bots) | 0.92 - 0.95 |
-| Detection Latency | < 10ms per request |
-
----
-
-## Advanced Usage
-
-### Retrain with New Data
-
-Add new traffic logs to `data/traffic_logs.json` and retrain:
-```bash
-python feature_engineering.py
-python train_model.py
-```
-
-### Export Predictions
-
-Access raw predictions:
-```python
-import pandas as pd
-preds = pd.read_csv('data/predictions.csv')
-print(preds[['ip', 'ensemble_score', 'victor_flag']])
-```
-
-### Custom Threshold Analysis
-
-```python
-import pandas as pd
-preds = pd.read_csv('data/predictions.csv')
-
-# Check different thresholds
-for threshold in [0.3, 0.5, 0.7, 0.9]:
-    detected = (preds['ensemble_score'] > threshold).sum()
-    print(f"Threshold {threshold}: {detected} bots detected")
-```
-
----
-
-## Future Improvements
-
-- [ ] Real-time model retraining on new traffic
-- [ ] Geographic IP blocking rules
-- [ ] Rate limiting per IP/ASN
-- [ ] Integration with WAF (Web Application Firewall)
-- [ ] Deep learning models (LSTM for sequence patterns)
-- [ ] Multi-class classification (different bot types)
-- [ ] API endpoint for live predictions
+|---|---|---|
+| `streamlit` | 1.35+ | Dashboard UI |
+| `xgboost` | 2.0+ | Gradient boosting classifier |
+| `scikit-learn` | 1.3+ | Isolation Forest, train/test split, metrics |
+| `shap` | 0.44+ | Model explainability |
+| `pandas` | 2.0+ | Data manipulation |
+| `plotly` | 5.18+ | Interactive charts |
+| `flask` | 2.3+ | Honeypot web server |
+| `faker` | 19.0+ | Realistic user agent generation |
+| `requests` | 2.31+ | Traffic simulation + IP geolocation |
+| `joblib` | 1.3+ | Model serialization |
+| `pyyaml` | 6.0+ | Config loading |
+| `numpy` | 1.25+ | Feature arrays for model inference |
 
 ---
 
 ## License
 
-This project is provided as-is for educational and commercial use.
-
-## Author
-
-Victor Bot Detection System — Built for high-accuracy real-time bot detection.
-
----
-
-## Support
-
-For issues or questions:
-1. Check the **Troubleshooting** section above
-2. Review dashboard **Settings** for system status
-3. Check `data/model_metrics.json` for performance metrics
-
+This project is provided as-is for educational and research use.
