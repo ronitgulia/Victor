@@ -504,7 +504,7 @@ if page == "Dashboard":
     # ─────────────────────────────────────────────────────────────────
     
     st.divider()
-    st.markdown("## 🔍 Recent Activity")
+    st.markdown("## Recent Activity")
     st.markdown("_Latest requests flowing through Victor right now_")
     
     # Get recent requests (last 10)
@@ -521,7 +521,7 @@ if page == "Dashboard":
             for idx, row in recent_requests.iterrows():
                 score = row.get("ensemble_score", 0)
                 is_bot = score > threshold
-                badge = '🤖 BOT' if is_bot else '👤 HUMAN'
+                badge = 'BOT' if is_bot else 'HUMAN'
                 badge_class = 'bot-badge' if is_bot else 'human-badge'
                 score_color = '#d63031' if is_bot else '#00b894'
                 
@@ -536,7 +536,7 @@ if page == "Dashboard":
     st.divider()
     
     # Quick insights section
-    st.markdown("## 💡 Quick Insights")
+    st.markdown("## Quick Insights")
     
     insight_cols = st.columns(3)
     
@@ -548,7 +548,7 @@ if page == "Dashboard":
                 top_ip_addr = top_ip.index[0]
                 top_ip_count = top_ip.values[0]
                 top_ip_avg_score = preds[preds["ip"] == top_ip_addr]["ensemble_score"].mean()
-                top_ip_status = "🤖 Bot" if top_ip_avg_score > threshold else "👤 Human"
+                top_ip_status = "Bot" if top_ip_avg_score > threshold else "Human"
                 
                 st.markdown(f"""
                 <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); 
