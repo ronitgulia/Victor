@@ -34,8 +34,8 @@ print(f"Dataset: {len(df)} rows | Bots: {y.sum()} | Humans: {(y==0).sum()}")
 
 if y.nunique() < 2:
     print("\nERROR: Only one class found in labels.")
-    print("Please delete data/traffic_logs.json and re-run the pipeline:")
-    print("  python honeypot.py        (start server, Ctrl+C after traffic sim)")
+    print("Please delete data/victor_traffic.db and re-run the pipeline:")
+    print("  python honeypot.py        (start server in separate terminal)")
     print("  python simulate_traffic.py")
     print("  python feature_engineering.py")
     print("  python train_model.py")

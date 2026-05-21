@@ -4,6 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import json, os
 from datetime import datetime
+from database import TrafficDatabase
 
 st.set_page_config(
     page_title="Victor — Bot Detection",
@@ -250,7 +251,7 @@ CHART_LAYOUT = dict(
 
 @st.cache_data(ttl=5)  # 5 second cache for live updates
 def load_data():
-    """Load predictions and features with auto-refresh"""
+    """Load predictions and features from files"""
     try:
         preds = pd.read_csv("data/predictions.csv")
         features = pd.read_csv("data/features.csv")
@@ -321,7 +322,7 @@ with st.sidebar:
     st.markdown("### Where to?")
     page = st.radio(
         "Select View:",
-        ["Dashboard", "IP Lookup", "Model Explainability", "Raw Data", "Settings"],
+        ["Dashboard", "Timeline", "IP Lookup", "Model Explainability", "Raw Data", "Settings"],
         label_visibility="collapsed"
     )
     
@@ -590,6 +591,120 @@ if page == "Dashboard":
             </div>
         </div>
         """, unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────────────────────────
+# PAGE: TIMELINE
+# ─────────────────────────────────────────────────────────────────
+
+elif page == "Timeline":
+    st.markdown("# Traffic Timeline")
+    st.markdown("_Hourly traffic patterns and bot activity trends_")
+    st.divider()
+    
+    db = TrafficDatabase()
+    timeline_stats = db.get_timeline_stats()
+    
+    if len(timeline_stats) > 0:
+        # Convert hour to datetime for proper plotting
+        timeline_stats['hour'] = pd.to_datetime(timeline_stats['hour'])
+        
+        # Timeline chart - Total requests
+        st.subheader("Hourly Traffic Volume")
+        fig_timeline = px.area(
+            timeline_stats,
+            x="hour",
+            y=["bot_count", "human_count"],
+            labels={"hour": "Time", "value": "Requests", "variable": "Type"},
+            color_discrete_map={"bot_count": "#d63031", "human_count": "#00b894"}
+        )
+        fig_timeline.update_layout(**CHART_LAYOUT, height=400)
+        st.plotly_chart(fig_timeline, use_container_width=True)
+        
+        st.divider()
+        
+        # Bot detection rate over time
+        st.subheader("Bot Detection Rate Trend")
+        timeline_stats['bot_rate'] = (
+            timeline_stats['bot_count'] / 
+            (timeline_stats['total_requests'] + 1) * 100
+        )
+        
+        fig_rate = px.line(
+            timeline_stats,
+            x="hour",
+            y="bot_rate",
+            labels={"hour": "Time", "bot_rate": "Bot %"},
+            markers=True
+        )
+        fig_rate.update_traces(line=dict(color="#d63031", width=3), marker=dict(size=8))
+        fig_rate.update_layout(**CHART_LAYOUT, height=350)
+        st.plotly_chart(fig_rate, use_container_width=True)
+        
+        st.divider()
+        
+        # Timeline statistics
+        st.subheader("Detailed Timeline Statistics")
+        display_timeline = timeline_stats.copy()
+        display_timeline['hour'] = display_timeline['hour'].astype(str)
+        display_timeline = display_timeline.round(2)
+        st.dataframe(display_timeline, use_container_width=True, height=400)
+        
+        st.divider()
+        
+        # Insights
+        st.subheader("Timeline Insights")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            peak_hour = timeline_stats.loc[timeline_stats['total_requests'].idxmax()]
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); 
+                        border-radius: 8px; padding: 16px; border: 1px solid #90caf9;">
+                <div style="color: #1565c0; font-weight: 600; font-size: 0.9rem;">PEAK HOUR</div>
+                <div style="color: #0d47a1; font-size: 1.2rem; font-weight: 700; margin: 8px 0;">
+                    {peak_hour['total_requests']:.0f} requests
+                </div>
+                <div style="color: #42a5f5; font-size: 0.9rem;">
+                    {str(peak_hour['hour'])[:13]}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            avg_bot_rate = (timeline_stats['bot_count'].sum() / timeline_stats['total_requests'].sum() * 100)
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); 
+                        border-radius: 8px; padding: 16px; border: 1px solid #ce93d8;">
+                <div style="color: #6a1b9a; font-weight: 600; font-size: 0.9rem;">AVG BOT RATE</div>
+                <div style="color: #4a148c; font-size: 1.2rem; font-weight: 700; margin: 8px 0;">
+                    {avg_bot_rate:.1f}%
+                </div>
+                <div style="color: #8e24aa; font-size: 0.9rem;">
+                    Across all hours
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            total_requests_time = timeline_stats['total_requests'].sum()
+            total_hours = len(timeline_stats)
+            avg_per_hour = total_requests_time / total_hours if total_hours > 0 else 0
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); 
+                        border-radius: 8px; padding: 16px; border: 1px solid #a5d6a7;">
+                <div style="color: #1b5e20; font-weight: 600; font-size: 0.9rem;">AVG PER HOUR</div>
+                <div style="color: #0d3817; font-size: 1.2rem; font-weight: 700; margin: 8px 0;">
+                    {avg_per_hour:.0f} requests
+                </div>
+                <div style="color: #388e3c; font-size: 0.9rem;">
+                    {total_hours} hours tracked
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.info("No timeline data available yet. Run the traffic simulation to generate data.")
+
 # ─────────────────────────────────────────────────────────────────
 # PAGE: IP LOOKUP
 # ─────────────────────────────────────────────────────────────────

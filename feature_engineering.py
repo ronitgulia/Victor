@@ -1,21 +1,30 @@
-import json
 import pandas as pd
 import numpy as np
 from datetime import datetime
-
-LOG_FILE = "data/traffic_logs.json"
+from database import TrafficDatabase
 
 def load_logs():
-    with open(LOG_FILE, "r") as f:
-        logs = json.load(f)
+    """Load logs from SQLite database"""
+    db = TrafficDatabase()
+    
+    # Get all logs from SQLite
+    df = db.get_all_logs()
+    
+    if len(df) == 0:
+        print("ERROR: No traffic logs found in database!")
+        print("Please run the pipeline:")
+        print("  1. python honeypot.py          (in separate terminal)")
+        print("  2. python simulate_traffic.py  (run in another terminal)")
+        print("  3. Then run this script again")
+        exit(1)
 
-    df = pd.DataFrame(logs)
-
+    # Convert timestamp to datetime
     df["timestamp"] = pd.to_datetime(df["timestamp"])
 
+    # Sort by timestamp
     df = df.sort_values("timestamp").reset_index(drop=True)
 
-    print(f"Loaded {len(df)} log entries.")
+    print(f"Loaded {len(df)} log entries from SQLite database.")
     return df
 
 def extract_features(df):

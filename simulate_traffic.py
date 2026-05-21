@@ -81,4 +81,4 @@ if __name__ == "__main__":
     print("Starting Victor traffic simulation...\n")
     simulate_human(num_sessions=40)
     simulate_bot(num_sessions=40)
-    print("\nAll done! Check data/traffic_logs.json for your dataset.")
+    print("\nAll done! Traffic logged to data/victor_traffic.db")
