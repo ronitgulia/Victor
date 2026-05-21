@@ -20,16 +20,23 @@ Config()  # load singleton before accessing any keys
 # ──────────────────────────────────────────────────────────────────
 df = pd.read_csv("data/features.csv")
 
-FEATURE_COLS = [
-    "ua_is_suspicious",
-    "has_referer",
-    "has_accept_lang",
-    "hit_secret_page",
-    "ua_length",
-    "time_gap_seconds",
-    "unique_pages_visited",
-    "total_requests_from_ip"
-]
+# Read feature columns from config; gracefully drop any not present in this CSV
+ALL_FEATURE_COLS = Config.get("features.columns", [
+    "ua_is_suspicious", "has_referer", "has_accept_lang",
+    "hit_secret_page", "ua_length", "time_gap_seconds",
+    "unique_pages_visited", "total_requests_from_ip",
+    "is_datacenter_ip", "header_count",
+    "missing_common_headers", "accept_encoding_score",
+])
+
+# Only train on features that actually exist in the CSV
+FEATURE_COLS = [c for c in ALL_FEATURE_COLS if c in df.columns]
+missing = set(ALL_FEATURE_COLS) - set(FEATURE_COLS)
+if missing:
+    print(f"  Warning: {len(missing)} feature(s) not in CSV (re-run feature_engineering.py to get them):")
+    for m in sorted(missing):
+        print(f"    - {m}")
+print(f"  Training on {len(FEATURE_COLS)} features: {FEATURE_COLS}")
 
 X = df[FEATURE_COLS]
 y = df["label"]
@@ -146,6 +153,11 @@ joblib.dump(xgb_model,  "models/xgboost_model.pkl")
 joblib.dump(iso_forest, f"models/versions/isolation_forest_{ts}.pkl")
 joblib.dump(xgb_model,  f"models/versions/xgboost_model_{ts}.pkl")
 print(f"Models saved → models/  (versioned backup: models/versions/*_{ts}.pkl)")
+
+# Save exact feature list used for training so the real-time scorer stays in sync
+with open("models/feature_cols.json", "w") as f:
+    json.dump(FEATURE_COLS, f, indent=2)
+print(f"Feature list saved → models/feature_cols.json  ({len(FEATURE_COLS)} features)")
 
 metrics = {
     "xgb_auc"        : round(xgb_auc, 4),

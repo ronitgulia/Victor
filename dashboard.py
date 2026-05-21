@@ -139,6 +139,32 @@ with st.sidebar:
     col_b.metric("Humans", f"{human_count:,}", f"{human_pct:.1f}%")
     st.divider()
 
+    # ── Real-Time Shield ──────────────────────────────────────────
+    st.markdown("### 🛡 Real-Time Shield")
+    _rt_stats = {}
+    if os.path.exists("data/realtime_stats.json"):
+        try:
+            with open("data/realtime_stats.json") as _f:
+                _rt_stats = json.load(_f)
+        except Exception:
+            pass
+
+    if _rt_stats:
+        _model_ok = _rt_stats.get("model_loaded", False)
+        _scored   = _rt_stats.get("scored",  0)
+        _blocked  = _rt_stats.get("blocked", 0)
+        _mode     = "Blocking" if _rt_stats.get("blocking_mode") else "Log-only"
+        st.caption(f"Model: {'✅ Loaded' if _model_ok else '❌ Not loaded'}  |  {_mode}")
+        col_s, col_b2 = st.columns(2)
+        col_s.metric("Scored",  f"{_scored:,}")
+        col_b2.metric("Blocked", f"{_blocked:,}",
+                      delta=f"{_blocked/_scored*100:.1f}%" if _scored else None,
+                      delta_color="inverse")
+    else:
+        st.caption("Honeypot not running")
+        st.caption("Start: `python honeypot.py`")
+    st.divider()
+
     if metrics:
         st.markdown("### Model Quality")
         st.metric("XGBoost AUC",       f"{metrics.get('xgb_auc', 0):.3f}")

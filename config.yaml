@@ -28,6 +28,7 @@ paths:
   # Trained models
   isolation_forest_model: "models/isolation_forest.pkl"
   xgboost_model: "models/xgboost_model.pkl"
+  feature_cols: "models/feature_cols.json"
 
 # ─────────────────────────────────────────────────────────────────
 # FEATURE ENGINEERING
@@ -35,6 +36,7 @@ paths:
 features:
   # Column names for bot detection features
   columns:
+    # Original 8 features
     - ua_is_suspicious
     - has_referer
     - has_accept_lang
@@ -43,6 +45,11 @@ features:
     - time_gap_seconds
     - unique_pages_visited
     - total_requests_from_ip
+    # New 4 features (Step 6)
+    - is_datacenter_ip
+    - header_count
+    - missing_common_headers
+    - accept_encoding_score
   
   # Bot detection keywords in User-Agent
   bot_keywords:
@@ -107,6 +114,10 @@ detection:
   
   # Sidebar alert fires when bot % exceeds this value
   bot_spike_threshold: 60.0
+
+  # Real-time blocking in honeypot.py
+  # Set to false for log-only mode (score but don't block)
+  realtime_blocking: true
 
 # ─────────────────────────────────────────────────────────────────
 # TRAFFIC SIMULATION

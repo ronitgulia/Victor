@@ -1,0 +1,14 @@
+[
+  "ua_is_suspicious",
+  "has_referer",
+  "has_accept_lang",
+  "hit_secret_page",
+  "ua_length",
+  "time_gap_seconds",
+  "unique_pages_visited",
+  "total_requests_from_ip",
+  "is_datacenter_ip",
+  "header_count",
+  "missing_common_headers",
+  "accept_encoding_score"
+]
