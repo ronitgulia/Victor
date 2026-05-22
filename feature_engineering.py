@@ -17,10 +17,10 @@ import numpy as np
 import ipaddress
 import json
 import os
+from config import Paths
 
 from database import TrafficDatabase
 
-os.makedirs("data", exist_ok=True)
 
 BOT_KEYWORDS = [
     "python", "scrapy", "curl", "go-http", "wget",
@@ -41,7 +41,7 @@ FEATURE_COLS = [
 # ──────────────────────────────────────────────────────────────────
 # DATACENTER HELPERS
 # ──────────────────────────────────────────────────────────────────
-def _load_datacenter_ranges(path: str = "data/datacenter_ranges.json") -> list:
+def _load_datacenter_ranges(path: str = Paths.DATACENTER_RANGES) -> list:
     """Load CIDR networks from the ranges JSON file."""
     if not os.path.exists(path):
         print(f"  Warning: {path} not found — is_datacenter_ip will be 0 for all")
@@ -176,7 +176,7 @@ def engineer_features() -> pd.DataFrame:
     keep = ["ip", "timestamp"] + FEATURE_COLS + ["label"]
     out  = df[[c for c in keep if c in df.columns]].copy()
 
-    out.to_csv("data/features.csv", index=False)
+    out.to_csv(Paths.FEATURES, index=False)
     print(f"\nSaved → data/features.csv")
     print(f"  Rows: {len(out)} | Features: {len(FEATURE_COLS)} | "
           f"Bots: {int(out['label'].sum())} | Humans: {int((out['label']==0).sum())}")

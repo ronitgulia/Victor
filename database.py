@@ -3,7 +3,8 @@ import sqlite3
 import pandas as pd
 import os
 
-DB_PATH = "data/victor_traffic.db"
+from config import Paths
+DB_PATH = Paths.TRAFFIC_DB
 
 
 class TrafficDatabase:

@@ -57,23 +57,23 @@ CHART_LAYOUT = dict(
 @st.cache_data(ttl=Config.get("dashboard.cache_ttl", 5))
 def load_data():
     try:
-        preds    = pd.read_csv("data/predictions.csv")
-        features = pd.read_csv("data/features.csv")
+        preds    = pd.read_csv(Paths.PREDICTIONS)
+        features = pd.read_csv(Paths.FEATURES)
         return preds, features
     except FileNotFoundError:
         return None, None
 
 @st.cache_data(ttl=Config.get("dashboard.cache_ttl_metrics", 10))
 def load_metrics():
-    if os.path.exists("data/model_metrics.json"):
-        with open("data/model_metrics.json") as f:
+    if Path.exists(Paths.MODEL_METRICS):
+        with open(Paths.MODEL_METRICS) as f:
             return json.load(f)
     return None
 
 @st.cache_data(ttl=Config.get("dashboard.cache_ttl_metrics", 10))
 def load_shap_csv():
-    path = "data/shap/shap_values.csv"
-    if os.path.exists(path):
+    path = Paths.SHAP_VALUES
+    if Path.exists(path):
         return pd.read_csv(path)
     return None
 
@@ -142,9 +142,9 @@ with st.sidebar:
     # ── Real-Time Shield ──────────────────────────────────────────
     st.markdown("### 🛡 Real-Time Shield")
     _rt_stats = {}
-    if os.path.exists("data/realtime_stats.json"):
+    if Path.exists(Paths.REALTIME_STATS):
         try:
-            with open("data/realtime_stats.json") as _f:
+            with open(Paths.REALTIME_STATS) as _f:
                 _rt_stats = json.load(_f)
         except Exception:
             pass
@@ -388,18 +388,18 @@ elif page == "Model Explainability":
     st.markdown("_Understand why Victor classifies a request as a bot_")
     st.divider()
 
-    shap_img_global = "data/shap/global_summary.png"
-    shap_img_bar    = "data/shap/feature_bar.png"
+    shap_img_global = Paths.SHAP_GLOBAL_SUMMARY
+    shap_img_bar    = Paths.SHAP_FEATURE_BAR
     shap_csv        = load_shap_csv()
 
-    if os.path.exists(shap_img_global) or os.path.exists(shap_img_bar):
+    if Path.exists(shap_img_global) or Path.exists(shap_img_bar):
         col1, col2 = st.columns(2)
         with col1:
-            if os.path.exists(shap_img_global):
+            if Path.exists(shap_img_global):
                 st.subheader("Global Feature Importance")
                 st.image(shap_img_global, use_container_width=True)
         with col2:
-            if os.path.exists(shap_img_bar):
+            if Path.exists(shap_img_bar):
                 st.subheader("Average Feature Impact")
                 st.image(shap_img_bar, use_container_width=True)
     else:

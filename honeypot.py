@@ -14,6 +14,7 @@ from flask import Flask, request, jsonify, abort
 from datetime import datetime
 import uuid
 import os
+from config import Paths
 import json
 import atexit
 import threading
@@ -41,7 +42,7 @@ class DatacenterChecker:
     Uses Python's built-in ipaddress module — no external API calls.
     """
 
-    def __init__(self, ranges_path: str = "data/datacenter_ranges.json"):
+    def __init__(self, ranges_path: str = Paths.DATACENTER_RANGES):
         self.networks: list = []
         self._load(ranges_path)
 
@@ -104,8 +105,8 @@ class RealTimeScorer:
             import joblib
 
             # Feature list is saved alongside the model so they stay in sync
-            feat_path  = Config.get("paths.feature_cols",   "models/feature_cols.json")
-            model_path = Config.get("paths.xgboost_model",  "models/xgboost_model.pkl")
+            feat_path  = Config.get("paths.feature_cols",   Paths.FEATURE_COLS)
+            model_path = Config.get("paths.xgboost_model",  Paths.XGB_MODEL)
 
             if not os.path.exists(model_path):
                 print("[RealTimeScorer] No model found — run train_model.py first")
@@ -232,8 +233,8 @@ class RealTimeScorer:
             "last_updated":    datetime.utcnow().isoformat(),
         }
         try:
-            os.makedirs("data", exist_ok=True)
-            with open("data/realtime_stats.json", "w") as f:
+            
+            with open(Paths.REALTIME_STATS, "w") as f:
                 json.dump(stats, f, indent=2)
         except Exception:
             pass

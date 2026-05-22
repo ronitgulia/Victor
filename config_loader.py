@@ -37,7 +37,7 @@ class Config:
         """Get config value by dot-notation key
         
         Examples:
-            Config.get('paths.features')  -> 'data/features.csv'
+            Config.get('paths.features')  -> Path('data/features.csv')
             Config.get('detection.default_threshold')  -> 0.5
             Config.get('models.xgboost.n_estimators')  -> 300
         """
@@ -47,6 +47,11 @@ class Config:
         try:
             for k in keys:
                 config = config[k]
+            
+            # If it's a path, resolve it relative to project root
+            if keys[0] == 'paths' and isinstance(config, str):
+                return Path(__file__).parent / config
+                
             return config
         except (KeyError, TypeError):
             if default is not None:

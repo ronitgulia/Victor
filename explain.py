@@ -6,11 +6,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import json
 import os
+from config import Paths
 
-os.makedirs("data/shap", exist_ok=True)
 
-model = joblib.load("models/xgboost_model.pkl")
-df    = pd.read_csv("data/features.csv")
+model = joblib.load(Paths.XGB_MODEL)
+df    = pd.read_csv(Paths.FEATURES)
 
 # Always use the exact feature list the model was trained on
 _feat_path = "models/feature_cols.json"
@@ -42,7 +42,7 @@ plt.figure(figsize=(10, 6))
 shap.summary_plot(shap_values, X, show=False)
 plt.title("Victor — Feature Importance (SHAP)")
 plt.tight_layout()
-plt.savefig("data/shap/global_summary.png", dpi=150, bbox_inches="tight")
+plt.savefig(Paths.SHAP_GLOBAL_SUMMARY, dpi=150, bbox_inches="tight")
 plt.close()
 
 print("  Saved -> data/shap/global_summary.png")
@@ -53,13 +53,13 @@ plt.figure(figsize=(10, 6))
 shap.summary_plot(shap_values, X, plot_type="bar", show=False)
 plt.title("Victor — Average Feature Impact")
 plt.tight_layout()
-plt.savefig("data/shap/feature_bar.png", dpi=150, bbox_inches="tight")
+plt.savefig(Paths.SHAP_FEATURE_BAR, dpi=150, bbox_inches="tight")
 plt.close()
 
 print("  Saved -> data/shap/feature_bar.png")
 
 shap_df = pd.DataFrame(shap_values, columns=[f"shap_{c}" for c in FEATURE_COLS])
-shap_df.to_csv("data/shap/shap_values.csv", index=False)
+shap_df.to_csv(Paths.SHAP_VALUES, index=False)
 
 print("  Saved -> data/shap/shap_values.csv")
 print("\nSHAP explainability complete.")
