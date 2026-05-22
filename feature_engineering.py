@@ -17,15 +17,15 @@ import numpy as np
 import ipaddress
 import json
 import os
+import re
+from config_loader import Config
 from config import Paths
 
 from database import TrafficDatabase
 
 
-BOT_KEYWORDS = [
-    "python", "scrapy", "curl", "go-http", "wget",
-    "bot", "crawl", "spider"
-]
+BOT_KEYWORDS = Config.get('features.bot_keywords', [])
+BOT_REGEX_PATTERN = '|'.join(re.escape(kw) for kw in BOT_KEYWORDS)
 
 FEATURE_COLS = [
     # Original 8
@@ -104,9 +104,9 @@ def engineer_features() -> pd.DataFrame:
     print(f"  {len(df)} rows | {bots} bots | {humans} humans")
 
     # ── Original 8 features ───────────────────────────────────────
-    df["ua_is_suspicious"] = df["user_agent"].str.lower().apply(
-        lambda ua: int(any(kw in str(ua) for kw in BOT_KEYWORDS))
-    )
+    df["ua_is_suspicious"] = df["user_agent"].fillna("").str.contains(
+        BOT_REGEX_PATTERN, case=False, regex=True
+    ).astype(int)
     df["has_referer"]     = (df["referer"].str.strip().str.lower()     != "none").astype(int)
     df["has_accept_lang"] = (df["accept_lang"].str.strip().str.lower() != "none").astype(int)
     df["hit_secret_page"] = df["path"].str.contains("secret", na=False).astype(int)

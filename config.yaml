@@ -61,6 +61,18 @@ features:
     - bot
     - crawl
     - spider
+    - selenium
+    - playwright
+    - puppeteer
+    - headless
+    - phantomjs
+    - java
+    - ruby
+    - axios
+    - postman
+    - insomnia
+    - httpclient
+    - node-fetch
   
   # Special endpoints that only bots visit
   secret_endpoints:

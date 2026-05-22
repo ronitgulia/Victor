@@ -14,6 +14,7 @@ from flask import Flask, request, jsonify, abort
 from datetime import datetime
 import uuid
 import os
+import re
 from config import Paths
 import json
 import atexit
@@ -81,10 +82,7 @@ class RealTimeScorer:
     Falls back gracefully if no model is found — all requests pass through.
     """
 
-    BOT_KEYWORDS = [
-        "python", "scrapy", "curl", "go-http", "wget",
-        "bot", "crawl", "spider"
-    ]
+
 
     def __init__(self):
         self.model        = None
@@ -141,7 +139,7 @@ class RealTimeScorer:
         """Compute all ML features from the current request + IP history."""
         ua = record.get("user_agent", "")
 
-        ua_is_suspicious = int(any(kw in ua.lower() for kw in self.BOT_KEYWORDS))
+        ua_is_suspicious = int(bool(self.bot_regex.search(ua)))
         has_referer      = int(record.get("referer",     "none").lower() not in ("none", "", "-"))
         has_accept_lang  = int(record.get("accept_lang", "none").lower() not in ("none", "", "-"))
         hit_secret_page  = int("secret" in record.get("path", ""))
