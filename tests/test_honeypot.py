@@ -22,11 +22,9 @@ def test_homepage(client):
     assert 'Victor Honeypot' in data['message']
 
 def test_secret_data_trap(client):
-    """Test the honeypot trap endpoint returns 200 (unless blocked)."""
-    # Since we are using a test client without the ML model loaded, 
-    # it won't block the request, returning 200 OK.
+    """Test the honeypot trap endpoint always returns 403."""
     response = client.get('/secret-data')
-    assert response.status_code == 200
+    assert response.status_code == 403
     data = response.get_json()
     assert data['page'] == 'secret-data'
     assert 'warning' in data

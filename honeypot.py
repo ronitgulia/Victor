@@ -94,6 +94,9 @@ class RealTimeScorer:
         self.threshold    = Config.get("detection.default_threshold", 0.5)
         self.blocking     = Config.get("detection.realtime_blocking",  True)
 
+        _keywords = Config.get('features.bot_keywords', [])
+        self.bot_regex = re.compile('|'.join(re.escape(k) for k in _keywords), re.IGNORECASE)
+
         self._sessions: dict  = {}      # ip -> deque[dict]
         self._lock            = threading.Lock()
         self._scored          = 0

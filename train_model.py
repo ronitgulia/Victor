@@ -130,11 +130,14 @@ def main():
     )
     iso_forest.fit(X_train)           # ← train on X_train only
 
+    iso_raw_train = iso_forest.decision_function(X_train)
+    iso_min, iso_max = iso_raw_train.min(), iso_raw_train.max()
+
     # Score on held-out test set (fair evaluation)
     iso_raw_test   = iso_forest.decision_function(X_test)
-    iso_min, iso_max = iso_raw_test.min(), iso_raw_test.max()
     if iso_max > iso_min:
         iso_scores_test = 1 - (iso_raw_test - iso_min) / (iso_max - iso_min)
+        iso_scores_test = np.clip(iso_scores_test, 0.0, 1.0)
     else:
         iso_scores_test = np.full(len(X_test), 0.5)
 
@@ -299,7 +302,13 @@ def main():
           f"({len(FEATURE_COLS)} features)")
 
     # Persist the tuned ensemble weights so dashboard & honeypot use them
-    ensemble_weights = {"isolation_forest": iso_w, "xgboost": xgb_w, "best_threshold": best_thresh}
+    ensemble_weights = {
+        "isolation_forest": iso_w,
+        "xgboost": xgb_w,
+        "best_threshold": best_thresh,
+        "iso_min": float(iso_min),
+        "iso_max": float(iso_max)
+    }
     with open(Paths.ENSEMBLE_WEIGHTS, "w") as f:
         json.dump(ensemble_weights, f, indent=2)
     logger.info(f"Ensemble weights saved → models/ensemble_weights.json  "
