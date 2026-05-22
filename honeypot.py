@@ -383,11 +383,12 @@ def secret():
     Bots will find it through aggressive scanning.
     """
     return jsonify({
-        "status":    "ok",
+        "status":    "error",
+        "message":   "Forbidden",
         "page":      "secret-data",
         "warning":   "This endpoint should not be public",
         "timestamp": datetime.utcnow().isoformat(),
-    }), 200
+    }), 403
 
 
 @app.route("/api/status", methods=["GET"])

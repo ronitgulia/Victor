@@ -148,7 +148,7 @@ def main():
     # ──────────────────────────────────────────────────────────────────
     # STEP 4 — XGBoost (supervised)
     # ──────────────────────────────────────────────────────────────────
-    scale_pos_weight = (y_train == 0).sum() / max((y_train == 1).sum(), 1)
+    scale_pos_weight = max((y_train == 0).sum(), 1) / max((y_train == 1).sum(), 1)
 
     xgb_model = XGBClassifier(
         n_estimators     = Config.get("models.xgboost.n_estimators", 300),
