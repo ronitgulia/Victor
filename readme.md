@@ -59,7 +59,80 @@ docker compose down -v
 
 ---
 
+## 🔔 Webhook Alerts (Slack & Discord)
+
+Victor fires an automatic alert to **Slack** and/or **Discord** whenever a bot is detected with **≥ 90% confidence** — in real time, with zero impact on request latency.
+
+### Sample Alert
+
+```
+🚨 High-Confidence Bot Detected
+
+IP Address      192.0.2.42
+Confidence      97.0%  (threshold: 90%)
+Endpoint        /secret-data
+Datacenter IP   Yes ⚠️
+User-Agent      python-requests/2.28.0
+Detected At     2026-05-22 10:25:03 UTC
+```
+
+### Setup — 3 steps
+
+**Step 1 — Get your webhook URL**
+
+| Platform | How |
+|---|---|
+| **Slack** | [api.slack.com/apps](https://api.slack.com/apps) → Create App → Incoming Webhooks → Add to Workspace |
+| **Discord** | Server settings → Integrations → Webhooks → New Webhook → Copy URL |
+
+**Step 2 — Set the environment variable**
+
+```bash
+# Windows PowerShell
+$env:SLACK_WEBHOOK_URL   = "https://hooks.slack.com/services/..."
+$env:DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/..."
+
+# Linux / macOS
+export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
+export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
+```
+
+**Step 3 — Verify it works**
+
+```bash
+python alerts.py
+```
+
+Sends a test alert and confirms delivery.
+
+### Docker usage
+
+Create a `.env` file (never commit this):
+```env
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
+```
+
+Then run:
+```bash
+docker compose up
+```
+
+Docker Compose automatically reads `.env` and injects the variables into the container.
+
+### Tuning (config.yaml)
+
+```yaml
+alerts:
+  high_confidence_threshold: 0.90  # only alert on very confident detections
+  cooldown_seconds: 300            # same IP won't trigger again for 5 minutes
+  max_alerts_per_minute: 10        # global cap — prevents flood during mass attacks
+```
+
+---
+
 ## Architecture
+
 
 ```
                           ┌─────────────────────────────────┐

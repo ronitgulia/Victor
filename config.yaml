@@ -120,6 +120,27 @@ detection:
   realtime_blocking: true
 
 # ─────────────────────────────────────────────────────────────────
+# WEBHOOK ALERTS
+# ─────────────────────────────────────────────────────────────────
+# Fires a Slack / Discord message when a bot is detected with
+# confidence >= high_confidence_threshold.
+#
+# IMPORTANT: Webhook URLs are secrets — never put them here.
+# Set them as environment variables instead (see .env.example):
+#   SLACK_WEBHOOK_URL   = https://hooks.slack.com/services/...
+#   DISCORD_WEBHOOK_URL = https://discord.com/api/webhooks/...
+alerts:
+  # Minimum bot score required to fire an alert (0.0–1.0)
+  high_confidence_threshold: 0.90
+
+  # Minimum seconds between alerts for the same IP
+  # Prevents spam during a sustained bot attack
+  cooldown_seconds: 300
+
+  # Maximum alerts sent per minute across all IPs (global cap)
+  max_alerts_per_minute: 10
+
+# ─────────────────────────────────────────────────────────────────
 # TRAFFIC SIMULATION
 # ─────────────────────────────────────────────────────────────────
 simulation:

@@ -35,7 +35,11 @@ services:
     environment:
       - FLASK_PORT=5000
       - STREAMLIT_PORT=8501
-      - PYTHONUNBUFFERED=1    # live logs in terminal
+      - PYTHONUNBUFFERED=1          # live logs in terminal
+      # Webhook alerts — set these to enable Slack / Discord notifications
+      # Leave blank to disable (no alerts sent)
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
 
     restart: unless-stopped
 

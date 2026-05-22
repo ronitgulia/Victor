@@ -5,6 +5,7 @@ Every incoming request is:
   1. Logged to SQLite
   2. Scored by the trained XGBoost model in real-time
   3. Blocked (HTTP 403) if the ensemble score exceeds the configured threshold
+  4. Alerted via Slack / Discord if the score >= the high-confidence threshold
 
 Run with: python honeypot.py
 """
@@ -21,6 +22,7 @@ from collections import deque
 
 from database import TrafficDatabase
 from config_loader import Config
+from alerts import AlertManager
 
 Config()  # load singleton
 
@@ -252,8 +254,9 @@ class RealTimeScorer:
 # ──────────────────────────────────────────────────────────────────
 # GLOBAL INSTANCES
 # ──────────────────────────────────────────────────────────────────
-dc_checker = DatacenterChecker()
-scorer     = RealTimeScorer()
+dc_checker    = DatacenterChecker()
+scorer        = RealTimeScorer()
+alert_manager = AlertManager()
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -293,6 +296,9 @@ def log_and_score_request():
     bot_score, is_bot = scorer.score(record)
     record["bot_score"]  = round(bot_score, 4)
     record["is_blocked"] = 0
+
+    # Webhook alert — fires in background thread, zero latency impact
+    alert_manager.fire(record, bot_score)
 
     # Always persist log_data so after_request can save it
     request.log_data = record
@@ -435,19 +441,27 @@ if __name__ == "__main__":
     print("=" * 62)
     print("  VICTOR HONEYPOT SERVER  —  Real-Time Bot Detection")
     print("=" * 62)
-    print(f"  URL:             http://127.0.0.1:5000")
-    print(f"  Session ID:      {CURRENT_SESSION}")
-    print(f"  Model loaded:    {'Yes ✓' if scorer.model is not None else 'No — run train_model.py'}")
-    print(f"  Blocking mode:   {'ON  — bots get 403' if scorer.blocking else 'OFF — log only'}")
-    print(f"  Threshold:       {scorer.threshold}")
+    print(f"  URL:              http://127.0.0.1:5000")
+    print(f"  Session ID:       {CURRENT_SESSION}")
+    print(f"  Model loaded:     {'Yes ✓' if scorer.model is not None else 'No — run train_model.py'}")
+    print(f"  Blocking mode:    {'ON  — bots get 403' if scorer.blocking else 'OFF — log only'}")
+    print(f"  Threshold:        {scorer.threshold}")
     print(f"  Datacenter CIDRs: {len(dc_checker.networks)}")
+
+    # Webhook alert status
+    _slack   = "✓ Active" if alert_manager.slack_url   else "✗ Not configured"
+    _discord = "✓ Active" if alert_manager.discord_url else "✗ Not configured"
+    print(f"  Alert threshold:  ≥ {alert_manager.threshold:.0%} confidence")
+    print(f"  Slack alerts:     {_slack}")
+    print(f"  Discord alerts:   {_discord}")
+
     print()
     print("  Endpoints:")
-    print("    GET /                  Homepage")
-    print("    GET /articles          Articles")
-    print("    GET /about             About")
-    print("    GET /secret-data       Honeypot trap")
-    print("    GET /api/status        Server status")
+    print("    GET /                    Homepage")
+    print("    GET /articles            Articles")
+    print("    GET /about               About")
+    print("    GET /secret-data         Honeypot trap")
+    print("    GET /api/status          Server status")
     print("    GET /api/realtime-stats  Scoring stats")
     print()
     print("  Traffic logged to: data/victor_traffic.db")
