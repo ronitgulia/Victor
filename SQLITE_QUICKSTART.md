@@ -1,6 +1,6 @@
 # SQLite Database Quick Start Guide
 
-## تیز ترین شروعات (Quick Start)
+## Quick Start
 
 ### Step 1: Start Honeypot Server
 Open Terminal 1:
@@ -8,7 +8,7 @@ Open Terminal 1:
 python honeypot.py
 ```
 
-### Step 2: Run Traffic Simulation  
+### Step 2: Run Traffic Simulation
 Open Terminal 2:
 ```bash
 python simulate_traffic.py
@@ -31,69 +31,69 @@ streamlit run dashboard.py
 
 ---
 
-## نیا Timeline صفحہ (New Timeline Page)
+## New Timeline Page
 
-Dashboard میں نیا **Timeline** page شامل ہے جو یہ دیکھاتا ہے:
+The dashboard includes a **Timeline** page that shows:
 
-✅ **Hourly Traffic Volume** - ہر گھنٹے میں کتنی requests آئیں
-✅ **Bot Detection Rate** - بوٹس کا فیصد وقت کے ساتھ
-✅ **Detailed Statistics** - ہر گھنٹے کی تفصیلات
-✅ **Peak Hour** - سب سے زیادہ ٹریفک کب آیا
+✅ **Hourly Traffic Volume** — Number of requests per hour  
+✅ **Bot Detection Rate** — Bot percentage over time  
+✅ **Detailed Statistics** — Per-hour breakdown table  
+✅ **Peak Hour** — The hour with the highest traffic volume  
 
 ---
 
-## ڈیٹابیس کی خصوصیات (Database Features)
+## Database Features
 
-### Data Persists
+### Data Persists Across Runs
 ```
-پہلا run: 100 requests → Database میں save ہو جاتے ہیں
-دوسرا run: 100 requests → پہلے والے کے ساتھ add ہوتے ہیں
-Final: 200 requests total
+First run:  100 requests → saved to database
+Second run: 100 requests → appended to existing data
+Total:      200 requests accumulated
 ```
 
-### Multiple Sessions Tracking
-ہر بار جب honeypot.py چلاتے ہو:
-- Unique Session ID بنتا ہے
-- سب requests اسی session سے tag ہوتی ہیں
-- Timeline میں سب sessions کا ڈیٹا نظر آتا ہے
+### Multiple Session Tracking
+Every time `honeypot.py` starts:
+- A unique Session ID is generated
+- All requests are tagged with that session ID
+- The Timeline page shows data from all sessions combined
 
-### IP-based Analysis
+### IP-Based Analysis
 ```python
 from database import TrafficDatabase
 
 db = TrafficDatabase()
 
-# کسی IP کے سب requests دیکھو
+# Get all requests from a specific IP
 ip_logs = db.get_logs_by_ip("192.168.1.1")
 
-# کسی session کے requests دیکھو
+# Get all requests from a specific session
 session_logs = db.get_logs_by_session("session-uuid")
 
-# آخری گھنٹے کا ڈیٹا دیکھو
+# Get requests since a given timestamp
 recent = db.get_logs_since("2024-05-21 10:00:00")
 
-# ہر گھنٹے کی تفصیلات (Timeline کے لیے)
+# Get hourly aggregated stats (used by the Timeline page)
 hourly_stats = db.get_timeline_stats()
 ```
 
 ---
 
-## فائلوں کی بناوٹ (File Structure)
+## File Structure
 
 ```
 victor/
-├── honeypot.py                 # Flask server (traffic logs کو SQLite میں save کرتا ہے)
-├── database.py                 # SQLite database helper
-├── simulate_traffic.py         # بوٹ اور انسان کی ٹریفک simulate کرتا ہے
-├── feature_engineering.py      # SQLite سے features نکالتا ہے
-├── train_model.py              # Models train کرتا ہے
-├── dashboard.py                # Streamlit dashboard (اب Timeline page کے ساتھ)
+├── honeypot.py                 # Flask server — logs all traffic to SQLite
+├── database.py                 # SQLite database helper class
+├── simulate_traffic.py         # Simulates bot and human traffic
+├── feature_engineering.py      # Extracts ML features from SQLite
+├── train_model.py              # Trains XGBoost + Isolation Forest models
+├── dashboard.py                # Streamlit dashboard (includes Timeline page)
 │
 └── data/
-    ├── victor_traffic.db       # ✨ نیا SQLite database (تمام traffic یہاں ہے)
-    ├── features.csv            # features (label کے ساتھ)
-    ├── predictions.csv         # model predictions (ensemble scores)
-    ├── model_metrics.json      # model کی performance metrics
+    ├── victor_traffic.db       # SQLite database — all traffic logs stored here
+    ├── features.csv            # Engineered features with labels
+    ├── predictions.csv         # Model predictions with ensemble scores
+    ├── model_metrics.json      # AUC, Precision, Recall, F1 metrics
     └── shap/
         └── shap_values.csv
 
@@ -104,53 +104,54 @@ victor/
 
 ---
 
-## ڈیٹابیس سے شروع کریں (Reset Database)
+## Reset the Database (Start Fresh)
 
-اگر شروع سے آنا ہو:
+To wipe all data and start over:
 
 ```bash
-# Python REPL کھول
 python
+```
 
-# یہ commands چلا
+Then in the Python REPL:
+```python
 from database import TrafficDatabase
 db = TrafficDatabase()
 db.clear_all()
-
-# اب تمام data صاف ہو گیا
 exit()
+```
+
+All traffic records will be cleared. Re-run the full pipeline to generate new data.
+
+---
+
+## Important Notes
+
+1. **SQLite is automatic** — Traffic is logged by `honeypot.py` directly into SQLite on every request
+2. **Data is persistent** — Unlike JSON, the database is never overwritten between runs
+3. **View the Timeline** — Open the dashboard and navigate to the "Timeline" page
+4. **Run multiple simulations** — Each run adds to the existing dataset, increasing model accuracy
+
+---
+
+## Troubleshooting
+
+❌ **"No data in Timeline"**  
+Run all 4 steps in order: `honeypot.py` → `simulate_traffic.py` → `feature_engineering.py` → `train_model.py`
+
+❌ **"Database locked error"**  
+Ensure only one instance of `honeypot.py` is running at a time
+
+❌ **"Empty features.csv"**  
+Check whether the database contains traffic logs:
+```python
+from database import TrafficDatabase
+db = TrafficDatabase()
+print(f"Total records: {db.get_record_count()}")
+print(f"Unique IPs: {db.get_unique_ips()}")
 ```
 
 ---
 
-## اہم نکات (Important Notes)
+## More Information
 
-1. **SQLite خودکار ہے** - Traffic logs خودکار طور پر honeypot.py سے SQLite میں جاتے ہیں
-2. **ڈیٹا محفوظ رہتا ہے** - JSON کی طرح overwrite نہیں ہوتا
-3. **Timeline دیکھنے کے لیے** - Dashboard کھولو اور "Timeline" پیج پر جاؤ
-4. **Multiple runs کریں** - ہر run کا ڈیٹا add ہوتا ہے
-
----
-
-## اگر مسائل ہوں (Troubleshooting)
-
-❌ **"No data in Timeline"**
-- سب 4 steps چلا: honeypot → simulate → feature_engineering → train_model
-
-❌ **"Database locked error"**
-- یقینی بناؤ کہ ایک وقت میں صرف ایک honeypot.py چل رہا ہے
-
-❌ **"Empty features.csv"**
-- SQLite میں traffic logs ہیں؟ Status check کرو:
-  ```python
-  from database import TrafficDatabase
-  db = TrafficDatabase()
-  print(f"Total records: {db.get_record_count()}")
-  print(f"Unique IPs: {db.get_unique_ips()}")
-  ```
-
----
-
-## مزید معلومات (More Info)
-
-مکمل تفصیل `SQLITE_SETUP.md` میں ہے۔
+See `SQLITE_SETUP.md` for the full database schema, API reference, and advanced usage.

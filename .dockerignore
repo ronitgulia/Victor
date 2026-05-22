@@ -1,0 +1,46 @@
+# ─────────────────────────────────────────────────────────────────
+# .dockerignore — Victor Bot Detection
+# Excludes files that shouldn't be in the Docker image
+# ─────────────────────────────────────────────────────────────────
+
+# Git
+.git
+.gitignore
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Virtual environments
+venv/
+env/
+.env
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.egg-info/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Docs (not needed at runtime)
+*.md
+!README.md
+
+# Build artifacts
+dist/
+build/
+
+# Data & models — these are generated at runtime inside the container.
+# Comment out the lines below if you want to pre-seed them instead.
+# data/*.db
+# data/*.csv
+# data/*.json
+# models/*.pkl
+# models/*.joblib

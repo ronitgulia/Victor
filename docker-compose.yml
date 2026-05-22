@@ -1,0 +1,54 @@
+# ─────────────────────────────────────────────────────────────────
+# VICTOR BOT DETECTION — Docker Compose
+# ─────────────────────────────────────────────────────────────────
+#
+# Usage:
+#   docker compose up          # build + run (first time)
+#   docker compose up --build  # rebuild image
+#   docker compose down        # stop & remove containers
+#
+# Services:
+#   victor   — all-in-one container (Flask + pipeline + Streamlit)
+#
+# Ports:
+#   http://localhost:8501  → Streamlit dashboard  ← open this!
+#   http://localhost:5000  → Flask honeypot API
+# ─────────────────────────────────────────────────────────────────
+
+services:
+  victor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: victor-bot-detection
+    image: victor-bot-detection:latest
+
+    ports:
+      - "8501:8501"   # Streamlit dashboard
+      - "5000:5000"   # Flask honeypot
+
+    # Persist data & models so re-runs are instant
+    volumes:
+      - victor_data:/app/data
+      - victor_models:/app/models
+
+    environment:
+      - FLASK_PORT=5000
+      - STREAMLIT_PORT=8501
+      - PYTHONUNBUFFERED=1    # live logs in terminal
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s     # give pipeline time to finish first
+
+# ── Named volumes (data persists across docker compose down/up) ───
+volumes:
+  victor_data:
+    name: victor_data
+  victor_models:
+    name: victor_models

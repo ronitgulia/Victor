@@ -18,6 +18,44 @@ Victor combines **XGBoost** and **Isolation Forest** in a weighted ensemble to d
 - ⚙️ **Fully config-driven** — all thresholds, weights, and paths in `config.yaml`
 - 🗂 **Model versioning** — every retrain saves a timestamped backup in `models/versions/`
 - 🚀 **One-click pipeline** — `python run_pipeline.py` runs all steps in order
+- 🐳 **Docker-ready** — full containerized setup with `docker compose up`
+
+---
+
+## 🐳 Run with Docker (Recommended)
+
+No Python, no pip, no setup required. One command runs everything:
+
+```bash
+docker compose up
+```
+
+Then open **http://localhost:8501** — the dashboard is live.
+
+What happens automatically:
+1. **Flask honeypot** starts on port 5000
+2. **Traffic simulation** — 40 human + 40 bot sessions are generated
+3. **ML pipeline** — features extracted, XGBoost + IsolationForest trained, SHAP computed
+4. **Streamlit dashboard** launches on port 8501
+
+> **First run** takes ~3–5 minutes (image build + pip install). Subsequent runs are instant — data & models are persisted in Docker volumes (`victor_data`, `victor_models`).
+
+```bash
+# Build & run (first time)
+docker compose up
+
+# Rebuild after code changes
+docker compose up --build
+
+# Run in background
+docker compose up -d
+
+# Stop & remove containers (data volumes preserved)
+docker compose down
+
+# Stop & wipe all data (clean slate)
+docker compose down -v
+```
 
 ---
 

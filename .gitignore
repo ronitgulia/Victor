@@ -26,6 +26,10 @@ data/*.db
 .DS_Store
 Thumbs.db
 
+# Docker (keep Dockerfile, docker-compose.yml, .dockerignore tracked in git)
+# But ignore local override files
+docker-compose.override.yml
+
 # IDE
 .vscode/
 .idea/

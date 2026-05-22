@@ -453,4 +453,6 @@ if __name__ == "__main__":
     print("  Traffic logged to: data/victor_traffic.db")
     print("=" * 62)
 
-    app.run(debug=False, host="127.0.0.1", port=5000, threaded=True)
+    host = os.environ.get("FLASK_HOST", "0.0.0.0")
+    port = int(os.environ.get("FLASK_PORT", 5000))
+    app.run(debug=False, host=host, port=port, threaded=True)
